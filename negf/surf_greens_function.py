@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-import math
 import numpy as np
 import scipy.linalg as linalg
 
@@ -7,14 +6,14 @@ import scipy.linalg as linalg
 def sort_eigs(alpha, betha, Z, h_l, h_r, flag):
     """
     The function provides classification and sorting of the eigenvalues
-    and eigenvectors after Schur decomposition. The sorting procedure is described in
+    and eigenvectors. The sorting procedure is described in
     [M. Wimmer, Quantum transport in nanostructures: From computational concepts to
     spintronics in graphene and magnetic tunnel junctions, 2009, ISBN-9783868450255]
     The algorithm puts left-propagating solutions into upper-left block and right-propagating
     solutions - into the lower-right block.
     The sort is performed by absolute value of the eigenvalues. For those whose
     absolute value equals one, classification is performed computing their group velocity
-    using eigenvectors. The function also orthogonalize eigenvectors contained in the matrix Z
+    using eigenvectors. The function also orthogonalizes the eigenvectors contained in the matrix Z
     that correspond to degenerate eigenvalues.
 
     :param alpha:
@@ -32,14 +31,14 @@ def sort_eigs(alpha, betha, Z, h_l, h_r, flag):
 
     eigenvals = alpha / betha
 
-    inds = np.where((np.abs(eigenvals) < 1.0 + margin)*(np.abs(eigenvals) > 1.0 - margin))[0]
+    inds = np.where((np.abs(eigenvals) < 1.0 + margin) * (np.abs(eigenvals) > 1.0 - margin))[0]
     inds_deg = []
 
     for j, j1 in enumerate(inds[:-1]):
         inds_deg.append([j1])
-        for j2 in inds[j+1:]:
-            if np.abs(np.real(eigenvals[j1]-eigenvals[j2])) < angle_margin and \
-                    np.abs(np.imag(eigenvals[j1]-eigenvals[j2])) < angle_margin:
+        for j2 in inds[j + 1:]:
+            if np.abs(np.real(eigenvals[j1] - eigenvals[j2])) < angle_margin and \
+                    np.abs(np.imag(eigenvals[j1] - eigenvals[j2])) < angle_margin:
                 inds_deg[j].append(j2)
 
     inds_deg = [i for i in inds_deg if len(i) > 1]
@@ -48,7 +47,7 @@ def sort_eigs(alpha, betha, Z, h_l, h_r, flag):
         phi = np.matrix(Z[h_r.shape[0]:, item])
         oper = 1j * np.matrix(h_r * eigenvals[item[0]] - h_l * np.conj(eigenvals[item[0]]))
         _, vects = np.linalg.eig(phi.H * oper * phi)
-        print vects
+        print(vects)
         Z[h_r.shape[0]:, item] = phi * np.matrix(vects)
 
     phi = np.matrix(Z)
@@ -65,7 +64,7 @@ def sort_eigs(alpha, betha, Z, h_l, h_r, flag):
         elif np.abs(eigenval) < 1.0 - margin:
             ans.append(True)
         else:
-            gv = np.imag(2*phi[h_r.shape[0]:, j].H * np.matrix(h_r) * phi[h_r.shape[0]:, j])
+            gv = np.imag(2 * phi[h_r.shape[0]:, j].H * np.matrix(h_r) * phi[h_r.shape[0]:, j])
             # gv = group_velocity(phi[h_r.shape[0]:, j], eigenval, h_r)
 
             if flag:
@@ -81,9 +80,7 @@ def sort_eigs(alpha, betha, Z, h_l, h_r, flag):
 
 
 def iterate_gf(E, h_0, h_l, h_r, gf, num_iter):
-
-
-    for j in xrange(num_iter):
+    for j in range(num_iter):
         gf = h_r * np.linalg.pinv(E * np.identity(h_0.shape[0]) - h_0 - gf) * h_l
 
     return gf
@@ -102,7 +99,6 @@ def surface_greens_function_poles(E, h_l, h_0, h_r):
     :return:      eigenvalues, k, and eigenvectors, U,
     :rtype:       numpy.matrix, numpy.matrix
     """
-
 
     main_matrix = np.block([[np.zeros(h_0.shape), np.identity(h_0.shape[0])],
                             [-h_l, E * np.identity(h_0.shape[0]) - h_0]])
@@ -132,7 +128,7 @@ def surface_greens_function_poles(E, h_l, h_0, h_r):
     if np.size(roll) != 0:
         roll = h_0.shape[0] - int(round(np.mean(roll)))
         if roll != 0:
-            print roll
+            print(roll)
             eigenvals = np.roll(eigenvals, roll)
             eigenvects = np.roll(eigenvects, roll, axis=1)
             eigenvals[:abs(roll)] = 0.0
@@ -175,7 +171,6 @@ def surface_greens_function_poles_Shur(E, h_l, h_0, h_r):
     :rtype:       numpy.matrix, numpy.matrix
     """
 
-
     main_matrix = np.block([[np.zeros(h_0.shape), np.identity(h_0.shape[0])],
                             [-h_l, E * np.identity(h_0.shape[0]) - h_0]]).astype(np.complex64)
 
@@ -188,10 +183,10 @@ def surface_greens_function_poles_Shur(E, h_l, h_0, h_r):
                                                                output='complex', sort=sort)
 
     main_matrix1 = np.block([[np.zeros(h_0.shape), np.identity(h_0.shape[0])],
-                            [-h_r, E * np.identity(h_0.shape[0]) - h_0]]).astype(np.complex64)
+                             [-h_r, E * np.identity(h_0.shape[0]) - h_0]]).astype(np.complex64)
 
     overlap_matrix1 = np.block([[np.identity(h_0.shape[0]), np.zeros(h_0.shape)],
-                               [np.zeros(h_0.shape), h_l]]).astype(np.complex64)
+                                [np.zeros(h_0.shape), h_l]]).astype(np.complex64)
 
     sort1 = lambda a, b, z: sort_eigs(a, b, z, h_r, h_l, True)
 
@@ -248,15 +243,15 @@ def surface_greens_function(E, h_l, h_0, h_r):
             lambda_left[j, j] = vals[j]
             u_left[:, j] = vects[:, j]
 
-            lambda_right[j, j] = vals[-j + 2*h_0.shape[0]-1]
-            u_right[:, j] = vects[:, -j + 2*h_0.shape[0]-1]
+            lambda_right[j, j] = vals[-j + 2 * h_0.shape[0] - 1]
+            u_right[:, j] = vects[:, -j + 2 * h_0.shape[0] - 1]
 
         elif np.abs(vals[j]) < 1.0 - alpha:
             lambda_right[j, j] = vals[j]
             u_right[:, j] = vects[:, j]
 
-            lambda_left[j, j] = vals[-j + 2*h_0.shape[0]-1]
-            u_left[:, j] = vects[:, -j + 2*h_0.shape[0]-1]
+            lambda_left[j, j] = vals[-j + 2 * h_0.shape[0] - 1]
+            u_left[:, j] = vects[:, -j + 2 * h_0.shape[0] - 1]
 
         else:
 
@@ -269,15 +264,15 @@ def surface_greens_function(E, h_l, h_0, h_r):
                 lambda_left[j, j] = vals[j]
                 u_left[:, j] = vects[:, j]
 
-                lambda_right[j, j] = vals[-j + 2*h_0.shape[0]-1]
-                u_right[:, j] = vects[:, -j + 2*h_0.shape[0]-1]
+                lambda_right[j, j] = vals[-j + 2 * h_0.shape[0] - 1]
+                u_right[:, j] = vects[:, -j + 2 * h_0.shape[0] - 1]
 
             else:
                 lambda_right[j, j] = vals[j]
                 u_right[:, j] = vects[:, j]
 
-                lambda_left[j, j] = vals[-j + 2*h_0.shape[0]-1]
-                u_left[:, j] = vects[:, -j + 2*h_0.shape[0]-1]
+                lambda_left[j, j] = vals[-j + 2 * h_0.shape[0] - 1]
+                u_left[:, j] = vects[:, -j + 2 * h_0.shape[0] - 1]
 
             # lambda_right[j, j] = vals[j]
             # u_right[:, j] = vects[:, j]
@@ -302,7 +297,6 @@ def surface_greens_function(E, h_l, h_0, h_r):
 # functions below are essentially functional tests
 
 def main():
-
     import sys
     sys.path.insert(0, '/home/mk/TB_project/tb')
     import tb
@@ -376,11 +370,10 @@ def main():
         gamma_r = 1j * (np.matrix(sgf_r[j, :, :]) - np.matrix(sgf_r[j, :, :]).H)
         tr[j] = np.real(np.trace(gamma_l * gf0 * gamma_r * gf0.H))
         dos[j] = np.real(np.trace(1j * (gf0 - gf0.H)))
-    print sgf_l.shape
+    print(sgf_l.shape)
 
 
 def main1():
-
     import sys
     sys.path.insert(0, '/home/mk/TB_project/tb')
     import tb
@@ -414,7 +407,7 @@ def main1():
         test_gf = E * np.identity(num_sites) - h_0 - L - R
 
         metrics = np.linalg.cond(test_gf)
-        print "{} of {}: energy is {}, metrics is {}".format(j+1, energy.shape[0], E, metrics)
+        print("{} of {}: energy is {}, metrics is {}".format(j + 1, energy.shape[0], E, metrics))
 
         # if metrics > 15000:
         #     R = iterate_gf(E, h_0, h_l, h_r, R, 1)
@@ -425,7 +418,6 @@ def main1():
         # factor.append(phase)
         # factor1.append(phase1)
         # factor2.append(phase2)
-
 
     sgf_l = np.array(sgf_l)
     sgf_r = np.array(sgf_r)
@@ -464,11 +456,10 @@ def main1():
     plt.plot(dos)
     plt.show()
 
-    print sgf_l.shape
+    print(sgf_l.shape)
 
 
 def regularize_gf(gf):
-
     cutoff = 1e3
 
     if np.abs(np.sum(gf[0, :, :])) > cutoff:
@@ -477,15 +468,14 @@ def regularize_gf(gf):
             j += 1
         gf[0, :, :] = gf[j, :, :]
 
-    for j in xrange(gf.shape[0]):
-       if np.abs(np.sum(gf[j, :, :])) > cutoff:
-               gf[j, :, :] = gf[j-1, :, :]
+    for j in range(gf.shape[0]):
+        if np.abs(np.sum(gf[j, :, :])) > cutoff:
+            gf[j, :, :] = gf[j - 1, :, :]
 
     return gf
 
 
 def inverse_bs_problem():
-
     import sys
     sys.path.insert(0, '/home/mk/TB_project/tb')
     import tb
@@ -540,7 +530,7 @@ def inverse_bs_problem():
 
     for E in energy:
 
-        print E
+        print(E)
 
         vals, vects = surface_greens_function_poles(E, h_l, h_0, h_r)
 
@@ -553,7 +543,7 @@ def inverse_bs_problem():
                 vals[j] = float('nan')
             else:
                 vals[j] = np.angle(v)
-                print "The element number is", j, vals[j]
+                print("The element number is", j, vals[j])
 
         eigs.append(vals)
 
@@ -562,7 +552,6 @@ def inverse_bs_problem():
 
 
 def main2():
-
     import sys
     sys.path.insert(0, '/home/mk/TB_project/tb')
     import tb
@@ -615,11 +604,10 @@ def main2():
         gamma_r = 1j * (np.matrix(sgf_r[j, :, :]) - np.matrix(sgf_r[j, :, :]).H)
         tr[j] = np.real(np.trace(gamma_l * gf0 * gamma_r * gf0.H))
         dos[j] = np.real(np.trace(1j * (gf0 - gf0.H)))
-    print sgf_l.shape
+    print(sgf_l.shape)
 
 
 def main3():
-
     import sys
     sys.path.insert(0, '/home/mk/TB_project/tb')
     import tb
@@ -672,11 +660,11 @@ def main3():
         gamma_r = 1j * (np.matrix(sgf_r[j, :, :]) - np.matrix(sgf_r[j, :, :]).H)
         tr[j] = np.real(np.trace(gamma_l * gf0 * gamma_r * gf0.H))
         dos[j] = np.real(np.trace(1j * (gf0 - gf0.H)))
-    print sgf_l.shape
+
+    print(sgf_l.shape)
 
 
 if __name__ == "__main__":
-
     # inverse_bs_problem()
     # main()
     main1()

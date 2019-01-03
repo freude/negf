@@ -12,8 +12,8 @@ def _getline(cube):
 
     returns: (int, list<float>)
     """
-    l = cube.readline().strip().split()
-    return int(l[0]), map(float, l[1:])
+    line = cube.readline().strip().split()
+    return int(line[0]), np.array(list(map(float, line[1:])))
 
 
 def read_cube(fname):
@@ -25,6 +25,7 @@ def read_cube(fname):
 
     returns: (data: np.array, metadata: dict)
     """
+    bohr = 0.529177
     meta = {}
     with open(fname, 'r') as cube:
         cube.readline()
@@ -33,6 +34,14 @@ def read_cube(fname):
         nx, meta['xvec'] = _getline(cube)
         ny, meta['yvec'] = _getline(cube)
         nz, meta['zvec'] = _getline(cube)
+
+        if nx > 0:
+            meta['xvec'] = meta['xvec'] * bohr
+        if ny > 0:
+            meta['yvec'] = meta['yvec'] * bohr
+        if nz > 0:
+            meta['zvec'] = meta['zvec'] * bohr
+
         meta['atoms'] = [_getline(cube) for i in range(natm)]
         data = np.zeros((nx * ny * nz))
         idx = 0
@@ -40,6 +49,7 @@ def read_cube(fname):
             for val in line.strip().split():
                 data[idx] = float(val)
                 idx += 1
+
     data = np.reshape(data, (nx, ny, nz))
     return data, meta
 
@@ -55,31 +65,19 @@ class Field(object):
         if path.endswith('.cube') or path.endswith('.cub'):
 
             data, meta = read_cube(path)
-
             data = np.swapaxes(data, 1, 2)
 
             shape = data.shape
-            x = np.linspace(meta['org'][0], meta['xvec'][0] * shape[0], shape[0])
-            z = np.linspace(meta['org'][1], meta['yvec'][1] * shape[1], shape[1])
-            y = np.linspace(meta['org'][2], meta['zvec'][2] * shape[2], shape[2])
+            x = np.linspace(0.0, meta['xvec'][0] * shape[0], shape[0]) - 0.5 * meta['xvec'][0] * shape[0]
+            z = np.linspace(0.0, meta['yvec'][1] * shape[1], shape[1]) - 0.5 * meta['yvec'][1] * shape[1]
+            y = np.linspace(0.0, meta['zvec'][2] * shape[2], shape[2]) - 0.5 * meta['zvec'][2] * shape[2]
 
-            print(shape)
-            print(meta)
-            print(meta['org'])
-            print(meta['xvec'])
-            print(meta['yvec'])
-            print(meta['zvec'])
+            self._cube = [[x[0], y[0], z[0]], [x[-1], y[-1], z[-1]]]
 
-            self._cube = [[meta['org'][0]*0.529177,
-                           meta['org'][2]*0.529177,
-                           meta['org'][1]*0.529177],
-                          [meta['xvec'][0] * shape[0]*0.529177 - meta['org'][0]*0.529177,
-                           meta['zvec'][2] * shape[2]*0.529177 - meta['org'][2]*0.529177,
-                           meta['yvec'][1] * shape[1]*0.529177 - meta['org'][1]*0.529177]]
-
-            self.origin = (np.array(self._cube[1])-np.array(self._cube[0]))*0.25
+            self.origin = (0, 0, 0)
             self._shape = shape
 
+        data[data > 1] = 1
         self._interpolant = RegularGridInterpolator((x, y, z), data, bounds_error=False)
 
     def set_origin(self, origin):
@@ -110,8 +108,7 @@ class Field(object):
 
         return np.nan_to_num(values)
 
-
-if __name__ == '__main__':
+def main():
 
     import matplotlib.pyplot as plt
 
@@ -142,3 +139,48 @@ if __name__ == '__main__':
     # plt.contour(data[:, 50, :], levels=(0.04, 0.06, 0.08, 0.1, 0.2))
 
     plt.show()
+
+
+def main1():
+
+    import matplotlib.pyplot as plt
+
+    fl = Field(path='/home/mk/gaussian_swarm/gauss_comp/wB_ion.cube')
+    fl = Field(path='../cubefil.cube')
+    fl1 = Field(path='/home/mk/gaussian_swarm/gauss_comp/cam_ion.cube')
+
+    x = np.linspace(fl._cube[0][0], fl._cube[1][0], fl._shape[0])
+    y = np.linspace(fl._cube[0][1], fl._cube[1][1], fl._shape[1])
+    z = np.linspace(fl._cube[0][2], fl._cube[1][2], fl._shape[2])
+
+    x = np.linspace(-30, 30, 200)
+    y = np.linspace(-30, 30, 200)
+    z = np.linspace(-30, 30, 200)
+
+    X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
+
+    # data = fl.get_values(np.vstack((X.flatten(), Y.flatten(), Z.flatten())).T, translate=np.array([0,0,15]))
+    # data = data.reshape(X.shape)
+    # plt.imshow(data[:, :, 50])
+    # # plt.contour(data[:, 50, :], levels=(0.04, 0.06, 0.08, 0.1, 0.2))
+    # plt.show()
+
+    fl.set_origin(np.array([0.0, 0.0, 0.0]))
+    fl1.set_origin(np.array([0.0, 0.0, 0.0]))
+
+    data = fl.get_values(np.vstack((X.flatten(), Y.flatten(), Z.flatten())).T)
+    data = data.reshape(X.shape)
+
+    data1 = fl1.get_values(np.vstack((X.flatten(), Y.flatten(), Z.flatten())).T)
+    data1 = data1.reshape(X.shape)
+
+    plt.imshow(data[:, :, 100])
+
+    # plt.contour(data[:, 50, :], levels=(0.04, 0.06, 0.08, 0.1, 0.2))
+
+    plt.show()
+
+
+if __name__ == '__main__':
+
+    main1()

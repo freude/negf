@@ -1,3 +1,6 @@
+import sys
+sys.path.append('./negf')
+sys.path.append('../negf')
 import matplotlib.pyplot as plt
 import numpy as np
 import tb
@@ -50,7 +53,7 @@ def compute_self_energies_for_leads(energy, h_l, h_0, h_r, save=True):
 
         test_gf = E * np.identity(num_sites) - h_0 - L - R
         metrics = np.linalg.cond(test_gf)
-        print "{} of {}: energy is {}, metrics is {}".format(j + 1, energy.shape[0], E, metrics)
+        print("{} of {}: energy is {}, metrics is {}".format(j + 1, energy.shape[0], E, metrics))
 
         # if metrics > 15000:
         #     R = iterate_gf(E, h_0, h_l, h_r, R, 1)
@@ -140,7 +143,7 @@ for j, E in enumerate(energy):
     gf = E * np.identity(5 * num_sites) - h_d - sgf_l_loc - sgf_r_loc
 
     metrics = np.linalg.cond(gf)
-    print "{} of {}: energy is {}, metrics is {}".format(j + 1, energy.shape[0], E, metrics)
+    print("{} of {}: energy is {}, metrics is {}".format(j + 1, energy.shape[0], E, metrics))
 
     gf = np.linalg.pinv(gf)
 
@@ -167,4 +170,4 @@ plt.show()
 plt.plot(dos)
 plt.show()
 
-print sgf_l.shape
+print(sgf_l.shape)
