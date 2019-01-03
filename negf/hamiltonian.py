@@ -4,67 +4,62 @@ from .field import Field
 from .recursive_greens_functions import recursive_gf
 
 
-def generate_hamiltonian():
+class HamiltonianChain(object):
 
-    h_l = np.load('h_l.npy')
-    h_0 = np.load('h_0.npy')
-    h_r = np.load('h_r.npy')
-    coords = np.load('coords.npy')
+    def __init__(self, h_l, h_0, h_r, coords):
 
-    num_sites = h_0.shape[0]
+        self.h_l = h_l
+        self.h_0 = h_0
+        self.h_r = h_r
+        self._coords = coords
 
-    field = Field(path='/home/mk/gaussian_swarm/gauss_comp/out_ionized.cube')
-    field.set_origin(np.array([6.36, 11.86 + 10, 2.75]))
+        self.num_sites = h_0.shape[0]
 
-    period = np.array([0, 0, 5.50])
-    values_m2 = field.get_values(coords, translate=-2 * period)
-    values_m1 = field.get_values(coords, translate=-period)
-    values_0 = field.get_values(coords)
-    values_1 = field.get_values(coords, translate=period)
-    values_2 = field.get_values(coords, translate=2 * period)
+        self.elem_length = None
+        self.left_translations = None
+        self.right_translations = None
+        self.field = None
 
-    eps = 7.0
+    def translate(self, period, left_translations, right_translations):
 
-    mat_d_list = [h_0+0.0*values_m2,
-                  h_0+0.0*values_m2,
-                  h_0+0.0*values_m1,
-                  h_0+0.0*values_0,
-                  h_0+0.0*values_1,
-                  h_0+0.0*values_2,
-                  h_0+0.0*values_2]
+        self.elem_length = period
+        self.left_translations = left_translations
+        self.right_translations = right_translations
 
-    mat_u_list = [h_l, h_l, h_l, h_l, h_l, h_l]
-    mat_l_list = [h_r, h_r, h_r, h_r, h_r, h_r]
+        self.h_l = [self.h_l for _ in range(left_translations)] + \
+                   [self.h_l for _ in range(right_translations)]
 
+        self.h_0 = [self.h_0 for _ in range(left_translations)] + \
+                   [self.h_0] + \
+                   [self.h_0 for _ in range(right_translations)]
 
+        self.h_r = [self.h_r for _ in range(left_translations)] + \
+                   [self.h_r for _ in range(right_translations)]
 
-if __name__ == '__main__':
+    def add_field(self, field, eps=7.0):
 
+        self.field = [field.get_values(self._coords, translate=-jjj * self.elem_length) / eps
+                      for jjj in range(self.left_translations, 0, -1)] + \
+                     [field.get_values(self._coords) / eps] + \
+                     [field.get_values(self._coords, translate=-jjj * self.elem_length) / eps
+                      for jjj in range(1, self.right_translations + 1)]
 
+        for jjj in range(len(self.h_0)):
+            self.h_0[jjj].flat[::self.h_0[jjj].shape[0] + 1] += self.field[jjj]
 
-    sgf_l = np.load('sgf_l.npy')
-    sgf_r = np.load('sgf_r.npy')
+    def remove_field(self):
 
-    energy = np.linspace(2.1, 2.2, 50)
+        if isinstance(self.field, list):
+            for jjj in range(len(self.h_0)):
+                self.h_0[jjj].flat[::self.h_0[jjj].shape[0] + 1] -= self.field[jjj]
 
-    tr = np.zeros((energy.shape[0]), dtype=np.complex)
-    dos = np.zeros((energy.shape[0]), dtype=np.complex)
+    @property
+    def coords(self):
+        if self.elem_length is not None:
+            coords = [self._coords - jjj * self.elem_length for jjj in range(self.left_translations, 0, -1)] + \
+                     [self._coords] + \
+                     [self._coords + jjj * self.elem_length for jjj in range(1, self.right_translations + 1)]
 
-
-
-    for j, E in enumerate(energy):
-        print(j)
-
-        mat_d_list[0] += sgf_l[j, :, :]
-        mat_d_list[-1] += sgf_r[j, :, :]
-
-        grd, grl, gru, gr_left = recursive_gf(E, mat_d_list, mat_u_list, mat_l_list)
-
-        mat_d_list[0] -= sgf_l[j, :, :]
-        mat_d_list[-1] -= sgf_r[j, :, :]
-
-        for jj in range(len(grd)):
-            dos[j] += np.real(np.trace(1j * (grd[jj] - grd[jj].H)))
-
-    plt.plot(dos)
-    plt.show()
+            return np.concatenate(coords)
+        else:
+            return self._coords
