@@ -131,7 +131,7 @@ h_d = np.block([[h_0, h_l, zeros, zeros, zeros],
                 [zeros, zeros, h_r, h_0, h_l],
                 [zeros, zeros, zeros, h_r, h_0]])
 
-h_d -= np.diag(shifts)
+# h_d -= np.diag(shifts)
 
 damp = np.diag(np.zeros(np.diag(h_d).shape) + 1j * 0.001)
 
@@ -143,60 +143,62 @@ damp = np.diag(np.zeros(np.diag(h_d).shape) + 1j * 0.001)
 
 # dos = -np.trace(np.imag(gf), axis1=1, axis2=2)
 
+energy = energy[5:25]
+
 tr = np.zeros((energy.shape[0]), dtype=np.complex)
 dos = np.zeros((energy.shape[0]), dtype=np.complex)
 
-# from RecursiveGreensFunction import recursive_gf
-#
-# mat_d_list = [h_0, h_0, h_0, h_0, h_0]
-# mat_u_list = [h_l, h_l, h_l, h_l]
-# mat_l_list = [h_r, h_r, h_r, h_r]
-#
-# for j, E in enumerate(energy):
-#     print(j)
-#
-#     mat_d_list[0] += sgf_l[j, :, :]
-#     mat_d_list[-1] += sgf_r[j, :, :]
-#
-#     grd, grl, gru, gr_left = recursive_gf(E, mat_d_list, mat_u_list, mat_l_list)
-#
-#     mat_d_list[0] -= sgf_l[j, :, :]
-#     mat_d_list[-1] -= sgf_r[j, :, :]
-#
-#     for jj in range(len(grd)):
-#         dos[j] += np.real(np.trace(1j * (grd[jj] - grd[jj].H)))
-#
-#         gamma_l = 1j * (np.matrix(sgf_l_loc) - np.matrix(sgf_l_loc).H)
-#         gamma_r = 1j * (np.matrix(sgf_r_loc) - np.matrix(sgf_r_loc).H)
-#         dos[j] = np.real(np.trace(1j * (gf0 - gf0.H)))
-#         tr[j] = np.real(np.trace(gamma_l * gf0 * gamma_r * gf0.H))
+from negf.recursive_greens_functions import recursive_gf
 
+mat_d_list = [h_0, h_0, h_0, h_0]
+mat_u_list = [h_l, h_l, h_l]
+mat_l_list = [h_r, h_r, h_r]
 
 for j, E in enumerate(energy):
-    sgf_l_loc = np.block([[sgf_l[j, :, :], zeros, zeros, zeros, zeros],
-                          [zeros, zeros, zeros, zeros, zeros],
-                          [zeros, zeros, zeros, zeros, zeros],
-                          [zeros, zeros, zeros, zeros, zeros],
-                          [zeros, zeros, zeros, zeros, zeros]])
+    print(j)
 
-    sgf_r_loc = np.block([[zeros, zeros, zeros, zeros, zeros],
-                          [zeros, zeros, zeros, zeros, zeros],
-                          [zeros, zeros, zeros, zeros, zeros],
-                          [zeros, zeros, zeros, zeros, zeros],
-                          [zeros, zeros, zeros, zeros, sgf_r[j, :, :]]])
+    mat_d_list[0] = mat_d_list[0] + sgf_l[j, :, :]
+    mat_d_list[-1] = mat_d_list[-1] + sgf_r[j, :, :]
 
-    gf = E * np.identity(5 * num_sites) - h_d - sgf_l_loc - sgf_r_loc
+    grd, grl, gru, gr_left = recursive_gf(E, mat_d_list, mat_u_list, mat_l_list)
 
-    metrics = np.linalg.cond(gf)
-    print("{} of {}: energy is {}, metrics is {}".format(j + 1, energy.shape[0], E, metrics))
+    mat_d_list[0] = mat_d_list[0] - sgf_l[j, :, :]
+    mat_d_list[-1] = mat_d_list[-1] - sgf_r[j, :, :]
 
-    gf = np.linalg.pinv(gf)
+    for jj in range(len(grd)):
+        dos[j] += np.real(np.trace(1j * (grd[jj] - grd[jj].H)))
 
-    gf0 = np.matrix(gf)
-    gamma_l = 1j * (np.matrix(sgf_l_loc) - np.matrix(sgf_l_loc).H)
-    gamma_r = 1j * (np.matrix(sgf_r_loc) - np.matrix(sgf_r_loc).H)
-    dos[j] = np.real(np.trace(1j * (gf0 - gf0.H)))
-    tr[j] = np.real(np.trace(gamma_l * gf0 * gamma_r * gf0.H))
+        # gamma_l = 1j * (np.matrix(sgf_l_loc) - np.matrix(sgf_l_loc).H)
+        # gamma_r = 1j * (np.matrix(sgf_r_loc) - np.matrix(sgf_r_loc).H)
+        # dos[j] = np.real(np.trace(1j * (gf0 - gf0.H)))
+        # tr[j] = np.real(np.trace(gamma_l * gf0 * gamma_r * gf0.H))
+
+
+# for j, E in enumerate(energy):
+#     sgf_l_loc = np.block([[sgf_l[j, :, :], zeros, zeros, zeros, zeros],
+#                           [zeros, zeros, zeros, zeros, zeros],
+#                           [zeros, zeros, zeros, zeros, zeros],
+#                           [zeros, zeros, zeros, zeros, zeros],
+#                           [zeros, zeros, zeros, zeros, zeros]])
+#
+#     sgf_r_loc = np.block([[zeros, zeros, zeros, zeros, zeros],
+#                           [zeros, zeros, zeros, zeros, zeros],
+#                           [zeros, zeros, zeros, zeros, zeros],
+#                           [zeros, zeros, zeros, zeros, zeros],
+#                           [zeros, zeros, zeros, zeros, sgf_r[j, :, :]]])
+#
+#     gf = E * np.identity(5 * num_sites) - h_d - sgf_l_loc - sgf_r_loc
+#
+#     metrics = np.linalg.cond(gf)
+#     print("{} of {}: energy is {}, metrics is {}".format(j + 1, energy.shape[0], E, metrics))
+#
+#     gf = np.linalg.pinv(gf)
+#
+#     gf0 = np.matrix(gf)
+#     gamma_l = 1j * (np.matrix(sgf_l_loc) - np.matrix(sgf_l_loc).H)
+#     gamma_r = 1j * (np.matrix(sgf_r_loc) - np.matrix(sgf_r_loc).H)
+#     dos[j] = np.real(np.trace(1j * (gf0 - gf0.H)))
+#     tr[j] = np.real(np.trace(gamma_l * gf0 * gamma_r * gf0.H))
 
 ax = plt.axes()
 ax.set_xlabel('Energy (eV)')

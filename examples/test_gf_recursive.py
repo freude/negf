@@ -126,7 +126,9 @@ damp = np.diag(np.zeros(np.diag(h_d).shape) + 1j*0.001)
 tr = np.zeros((energy.shape[0]), dtype=np.complex)
 dos = np.zeros((energy.shape[0]), dtype=np.complex)
 
-for j, E in enumerate(energy):
+plt.axis([0, np.max(energy), 0, 3])
+
+for j, E in enumerate(energy[:25]):
 
     sgf_l_loc = np.block([[sgf_l[j, :, :], zeros, zeros, zeros, zeros],
                           [zeros, zeros, zeros, zeros, zeros],
@@ -153,13 +155,15 @@ for j, E in enumerate(energy):
     dos[j] = np.real(np.trace(1j * (gf0 - gf0.H)))
     tr[j] = np.real(np.trace(gamma_l * gf0 * gamma_r * gf0.H))
 
+    plt.scatter(E, tr[j])
+    plt.pause(0.05)
+
 
 ax = plt.axes()
 ax.set_xlabel('Energy (eV)')
 ax.set_ylabel('DOS')
 ax.plot(energy, dos)
 plt.show()
-
 
 ax = plt.axes()
 ax.set_xlabel('Energy (eV)')

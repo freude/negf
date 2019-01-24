@@ -61,6 +61,7 @@ class Field(object):
         self._origin_shift = np.array([0.0, 0.0, 0.0])
         self._cube = []
         self._origin_has_changed = False
+        self._rot_mat = []
 
         if path.endswith('.cube') or path.endswith('.cub'):
 
@@ -81,12 +82,40 @@ class Field(object):
         self._interpolant = RegularGridInterpolator((x, y, z), data, bounds_error=False)
 
     def set_origin(self, origin):
+        """
+        Set the coordinates of the center of the molecule
+        :param origin:
+        :return:
+        """
 
         if isinstance(origin, list):
             origin = np.array(origin)
 
         self._origin_shift = origin
         self._origin_has_changed = True
+
+    def rotate(self, axis, theta):
+        """
+        Set the coordinates of the center of the molecule
+        :param origin:
+        :return:
+        """
+        if axis == 'x':
+            rot_mat = np.matrix([[1.0, 0.0, 0.0],
+                                 [0.0, np.cos(theta), -np.sin(theta)],
+                                 [0.0, np.sin(theta), np.cos(theta)]])
+        elif axis == 'y':
+            rot_mat = np.matrix([[np.cos(theta), 0.0, np.sin(theta)],
+                                 [0.0, 1.0, 0.0],
+                                 [-np.sin(theta), 0.0, np.cos(theta)]])
+        elif axis == 'z':
+            rot_mat = np.matrix([[np.cos(theta), -np.sin(theta), 0.0],
+                                 [np.sin(theta), np.cos(theta), 0.0],
+                                 [0.0, 0.0, 1.0]])
+        else:
+            raise ValueError('Wrong axis')
+
+        self._rot_mat.append(rot_mat)
 
     def get_values(self, coords1, translate=None):
 
@@ -97,6 +126,10 @@ class Field(object):
 
         for j in range(len(coords)):
             coords[j] += self.origin
+
+            if len(self._rot_mat) > 0:
+                for item in self._rot_mat:
+                    coords[j] = np.array(np.matrix(item) * np.matrix(coords[j].T)).T
 
             if self._origin_has_changed:
                 coords[j] -= self._origin_shift
@@ -165,8 +198,8 @@ def main1():
     # # plt.contour(data[:, 50, :], levels=(0.04, 0.06, 0.08, 0.1, 0.2))
     # plt.show()
 
-    fl.set_origin(np.array([0.0, 0.0, 0.0]))
-    fl1.set_origin(np.array([0.0, 0.0, 0.0]))
+    fl.set_origin(np.array([0.0, 0.0, 1.0]))
+    fl1.set_origin(np.array([0.0, 0.0, 1.0]))
 
     data = fl.get_values(np.vstack((X.flatten(), Y.flatten(), Z.flatten())).T)
     data = data.reshape(X.shape)
