@@ -115,12 +115,12 @@ def recursive_gf(energy, mat_l_list, mat_d_list, mat_u_list, s_in=0, s_out=0):
     if isinstance(s_out, list):
 
         gip_left = [None for _ in range(num_of_matrices)]
-        gip_left[0] = gr_left[0] * s_out[0] * gr_left[0].H
+        gip_left[0] = gr_left[0] * s_out[0] * np.conj(gr_left[0])
 
         for q in range(num_of_matrices - 1):
-            sla2 = mat_l_list[q] * gip_left[q] * mat_u_list[q].H
+            sla2 = mat_l_list[q] * gip_left[q] * np.conj(mat_u_list[q])
             prom = s_out[q + 1] + sla2
-            gip_left[q + 1] = np.real(gr_left[q + 1] * prom * gr_left[q + 1].H)
+            gip_left[q + 1] = np.real(gr_left[q + 1] * prom * np.conj(gr_left[q + 1]))
 
         # ---------------------------------------------------------------
 
@@ -129,10 +129,10 @@ def recursive_gf(energy, mat_l_list, mat_d_list, mat_u_list, s_in=0, s_out=0):
         gpd = copy.copy(gip_left)
 
         for q in range(num_of_matrices - 2, -1, -1):               # Recursive algorithm
-            gpl[q] = grd[q + 1] * mat_l_list[q] * gip_left[q] + gpd[q + 1] * mat_l_list[q].H * gr_left[q].H
+            gpl[q] = grd[q + 1] * mat_l_list[q] * gip_left[q] + gpd[q + 1] * np.conj(mat_l_list[q]) * np.conj(gr_left[q])
             gpd[q] = np.real(gip_left[q] +
-                             gr_left[q] * mat_u_list[q] * gpd[q + 1] * mat_l_list[q].H * gr_left[q].H +
-                             (gip_left[q] * mat_u_list[q].H * grl[q].H + gru[q] * mat_l_list[q] * gip_left[q]))
+                             gr_left[q] * mat_u_list[q] * gpd[q + 1] * np.conj(mat_l_list[q]) * np.conj(gr_left[q]) +
+                             (gip_left[q] * np.conj(mat_u_list[q]) * np.conj(grl[q]) + gru[q] * mat_l_list[q] * gip_left[q]))
 
             gpu[0] = gpl[0].H
 
