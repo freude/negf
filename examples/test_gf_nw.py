@@ -27,12 +27,9 @@ def compute_tb_matrices(save=True):
 
 
 def compute_self_energies_for_leads(energy, h_l, h_0, h_r, save=True):
+
     sgf_l = []
     sgf_r = []
-    factor = []
-    factor1 = []
-    factor2 = []
-
     num_sites = h_0.shape[0]
 
     for j, E in enumerate(energy):
@@ -62,7 +59,7 @@ def compute_self_energies_for_leads(energy, h_l, h_0, h_r, save=True):
     return sgf_l, sgf_r
 
 
-h_l, h_0, h_r, coords = compute_tb_matrices()
+# h_l, h_0, h_r, coords = compute_tb_matrices()
 
 h_l = np.load('h_l.npy')
 h_0 = np.load('h_0.npy')

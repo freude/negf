@@ -5,6 +5,11 @@ from .field import Field
 from .recursive_greens_functions import recursive_gf
 
 
+def fd(energy, ef, temp):
+    kb = 8.61733e-5       # Boltzmann constant in eV
+    return 1.0 / (1.0 + np.exp((energy - ef) / (kb * temp)))
+
+
 class HamiltonianChain(object):
 
     def __init__(self, h_l, h_0, h_r, coords):
@@ -22,6 +27,26 @@ class HamiltonianChain(object):
         self.field = None
         self.sgf_l = None
         self.sgf_r = None
+
+        self.energy = 0
+        self.tempr = 0
+        self.ef1 = 0
+        self.ef2 = 0
+
+    @property
+    def sgf(self):
+
+        sgf = [None for _ in range(len(self.h_0))]
+
+        for jjj in range(len(self.h_0)):
+            if jjj == 0:
+                sgf[jjj] = -2.0 * np.matrix(np.imag(self.sgf_r) * fd(self.energy, self.ef1, self.tempr))
+            elif jjj == len(self.h_0) - 1:
+                sgf[jjj] = -2.0 * np.matrix(np.imag(self.sgf_l) * fd(self.energy, self.ef2, self.tempr))
+            else:
+                sgf[jjj] = np.matrix(np.zeros(self.h_0[jjj].shape))
+
+        return sgf
 
     def translate(self, period, left_translations, right_translations):
 
@@ -58,7 +83,12 @@ class HamiltonianChain(object):
 
         self.field = None
 
-    def add_self_energies(self, sgf_l, sgf_r):
+    def add_self_energies(self, sgf_l, sgf_r, energy=0, tempr=0, ef1=0, ef2=0):
+
+        self.energy = energy
+        self.tempr = tempr
+        self.ef1 = ef1
+        self.ef2 = ef2
 
         self.sgf_l = sgf_l
         self.sgf_r = sgf_r

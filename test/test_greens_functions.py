@@ -583,9 +583,40 @@ def expected_tr_of_complex_chain():
                      1.58010157e-25, -4.48767134e-28, 5.25952736e-26, -7.45210260e-26])
 
 
+def run_for_periods_with_density_recursive(single_period_test, periods):
+
+    ef1 = -1.3
+    ef2 = -1.0
+    tempr = 10
+
+    energy, dos, tr, h, sgf_l, sgf_r = single_period_test()
+    h_l, h_0, h_r = h.get_coupling_hamiltonians()
+    cell = h.ct.pcv
+
+    h_chain = HamiltonianChain(h_l, h_0, h_r, h.get_site_coordinates())
+    h_chain.translate(cell[0], periods, periods)
+
+    num_periods = 2 * periods + 1
+
+    dos1 = np.zeros((energy.shape[0]))
+    dens = np.zeros((energy.shape[0], num_periods))
+
+    for j, E in enumerate(energy):
+
+        h_chain.add_self_energies(sgf_l[j, :, :], sgf_r[j, :, :], energy=E, tempr=tempr, ef1=ef1, ef2=ef2)
+        grd, grl, gru, gr_left, gnd, gnl, gnu, gn_left = recursive_gf(E,
+                                                                      h_chain.h_l,
+                                                                      h_chain.h_0,
+                                                                      h_chain.h_r,
+                                                                      s_in=h_chain.sgf)
+        h_chain.remove_self_energies()
+
+        for jj in range(num_periods):
+            dos1[j] = dos1[j] + np.real(np.trace(1j * (grd[jj] - grd[jj].H))) / num_periods
+            dens[j, jj] = 2 * np.trace(gnd[jj])
+
+    print('hi')
+
 if __name__ == '__main__':
 
-    test_gf_single_atom_chain_several_periods()
-    test_gf_complex_chain_several_periods()
-    test_gf_single_atom_chain_several_periods_recursive()
-    test_gf_complex_chain_several_periods_recursive()
+    run_for_periods_with_density_recursive(complex_chain, 50)

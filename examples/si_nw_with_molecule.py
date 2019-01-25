@@ -50,7 +50,7 @@ h_chain = HamiltonianChain(h_l, h_0, h_r, coords)
 h_chain.translate([[0, 0, 5.50]], num_periods, num_periods)
 
 field = Field(path='/home/mk/gaussian_swarm/gauss_comp/out_ionized.cube')
-field.set_origin(np.array([6.36, 14.86, 2.75]))
+field.set_origin(np.array([6.36, 12.86, 2.75]))
 
 h_chain.add_field(field, eps=1)
 
