@@ -90,7 +90,6 @@ h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file='./SiNW/SiNW2/')
 # h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file='/home/mk/TB_project/tb/third_party/SiNW7.xyz')
 
 energy = np.linspace(2.1, 2.2, 50)
-energy = energy[:20]
 
 # sgf_l, sgf_r = compute_self_energies_for_leads(energy, h_l, h_0, h_r, save='./SiNW/SiNW2/')
 # sgf_l = np.load('sgf_l.npy')
@@ -131,4 +130,10 @@ for j, E in enumerate(energy):
 
 dos = comm.reduce(dos, root=0)
 
-print('hi')
+if rank == 0:
+    ids = [dos[item]['id'] for item in range(len(dos))]
+    dos = [x['eigenvalues'] for _, x in sorted(zip(ids, dos))]
+    dos = np.array(dos)
+    np.save('dos.npy', dos)
+
+
