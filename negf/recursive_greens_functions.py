@@ -32,6 +32,9 @@ def recursive_gf(energy, mat_l_list, mat_d_list, mat_u_list, s_in=0, s_out=0):
     M. P. Anantram, M. S. Lundstrom and D. E. Nikonov, Proceedings of the IEEE, 96, 1511 - 1550 (2008)
     DOI: 10.1109/JPROC.2008.927355
 
+    In order to get the electron correlation function output, the parameters s_in has to be set.
+    For the hole correlation function, the parameter s_out has to be set.
+
 
     :param energy:                     energy
     :param mat_d_list:                 list of diagonal blocks
@@ -45,12 +48,15 @@ def recursive_gf(energy, mat_l_list, mat_d_list, mat_u_list, s_in=0, s_out=0):
                                                  left-connected
     """
     # -------------------------------------------------------------------
-    # ---------- convert input arrays to matrix data type ---------------
+    # ---------- convert input arrays to the matrix data type -----------
+    # ----------------- in case they are not matrices -------------------
     # -------------------------------------------------------------------
+
+    damp = 0.0e-9
 
     for jj, item in enumerate(mat_d_list):
         mat_d_list[jj] = np.asmatrix(item)
-        mat_d_list[jj] = mat_d_list[jj] - np.diag(energy * np.ones(mat_d_list[jj].shape[0]))
+        mat_d_list[jj] = mat_d_list[jj] - np.diag(energy * np.ones(mat_d_list[jj].shape[0]) + 1j*damp)
 
         if jj < len(mat_d_list) - 1:
             mat_u_list[jj] = np.asmatrix(mat_u_list[jj])
@@ -141,7 +147,7 @@ def recursive_gf(energy, mat_l_list, mat_d_list, mat_u_list, s_in=0, s_out=0):
     # -------------------------------------------------------------------
 
     for jj, item in enumerate(mat_d_list):
-        mat_d_list[jj] = mat_d_list[jj] + np.diag(energy * np.ones(mat_d_list[jj].shape[0]))
+        mat_d_list[jj] = mat_d_list[jj] + np.diag(energy * np.ones(mat_d_list[jj].shape[0]) + 1j*damp)
 
     # -------------------------------------------------------------------
     # ---- choose a proper output depending on the list of arguments ----

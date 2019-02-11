@@ -135,11 +135,36 @@ class Field(object):
                 coords[j] -= self._origin_shift
 
             if isinstance(translate, np.ndarray):
-                coords[j] -= translate
+                coords[j] -= np.squeeze(translate)
 
         values = self._interpolant(coords)
 
         return np.nan_to_num(values)
+
+
+class Field1D(object):
+
+    def __init__(self, coord_dependence, axis=2):
+
+        self._func = coord_dependence
+        self._axis = axis
+
+    def get_values(self, coords1, translate=None):
+
+        coords = coords1.copy()
+        values = np.zeros(len(coords))
+
+        if len(coords.shape) < 2:
+            coords = [coords]
+
+        for j in range(len(coords)):
+            if isinstance(translate, np.ndarray):
+                coords[j] -= translate
+
+            values[j] = self._func(coords[j][self._axis])
+
+        return values
+
 
 def main():
 

@@ -1,11 +1,16 @@
 import os
 import shutil
+from mpi4py import MPI
 import numpy as np
 import tb
 from negf.hamiltonian_chain import HamiltonianChain
 from negf.field import Field
 from negf.recursive_greens_functions import recursive_gf
 
+
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+size = comm.Get_size()
 
 save_to = './SiNW/'
 
@@ -80,7 +85,7 @@ def compute_self_energies_for_leads(energy, h_l, h_0, h_r, save=None):
     return sgf_l, sgf_r
 
 
-h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file='./SiNW/SiNW3/')
+h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file='./SiNW/SiNW2/')
 # h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file='/home/mk/TB_project/tb/third_party/SiNW6.xyz')
 # h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file='/home/mk/TB_project/tb/third_party/SiNW7.xyz')
 
@@ -106,8 +111,11 @@ num_sites1 = 2 * num_periods * num_sites + num_sites
 num_periods = 2 * num_periods + 1
 
 dos1 = np.zeros((energy.shape[0]))
+dos = []
 
 for j, E in enumerate(energy):
+    if j % size != rank:
+        continue
 
     L, R = tb.surface_greens_function(E, h_l, h_0, h_r, iterate=True)
     h_chain.add_self_energies(L, R)
@@ -118,5 +126,9 @@ for j, E in enumerate(energy):
 
     for jj in range(len(grd)):
         dos1[j] = dos1[j] + np.real(np.trace(1j * (grd[jj] - grd[jj].H))) / num_periods
+
+    dos.append({'id': j, 'dos': dos1[j]})
+
+dos = comm.reduce(dos, root=0)
 
 print('hi')

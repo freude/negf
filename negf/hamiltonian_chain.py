@@ -50,7 +50,7 @@ class HamiltonianChain(object):
 
     def translate(self, period, left_translations, right_translations):
 
-        self.elem_length = period
+        self.elem_length = np.array(period)
         self.left_translations = left_translations
         self.right_translations = right_translations
 
@@ -66,11 +66,15 @@ class HamiltonianChain(object):
 
     def add_field(self, field, eps=7.0):
 
-        self.field = [field.get_values(self._coords, translate=jjj * self.elem_length) / eps
-                      for jjj in range(self.left_translations, 0, -1)] + \
-                     [field.get_values(self._coords) / eps] + \
-                     [field.get_values(self._coords, translate=-jjj * self.elem_length) / eps
-                      for jjj in range(1, self.right_translations + 1)]
+        self.field = []
+
+        for jjj in range(self.left_translations, 0, -1):
+            self.field.append(field.get_values(self._coords, translate=jjj * self.elem_length) / eps)
+
+        self.field.append(field.get_values(self._coords) / eps)
+
+        for jjj in range(1, self.right_translations + 1):
+            self.field.append(field.get_values(self._coords, translate=-jjj * self.elem_length) / eps)
 
         for jjj in range(len(self.h_0)):
             self.h_0[jjj] = self.h_0[jjj] + np.diag(self.field[jjj])
