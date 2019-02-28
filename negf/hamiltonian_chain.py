@@ -76,6 +76,8 @@ class HamiltonianChain(object):
         for jjj in range(1, self.right_translations + 1):
             self.field.append(field.get_values(self._coords, translate=-jjj * self.elem_length) / eps)
 
+        self.field = np.array(self.field)
+
         for jjj in range(len(self.h_0)):
             self.h_0[jjj] = self.h_0[jjj] + np.diag(self.field[jjj])
 

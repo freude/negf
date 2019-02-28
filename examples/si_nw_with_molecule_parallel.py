@@ -132,7 +132,7 @@ dos = comm.reduce(dos, root=0)
 
 if rank == 0:
     ids = [dos[item]['id'] for item in range(len(dos))]
-    dos = [x['eigenvalues'] for _, x in sorted(zip(ids, dos))]
+    dos = [x['dos'] for _, x in sorted(zip(ids, dos))]
     dos = np.array(dos)
     np.save('dos.npy', dos)
 

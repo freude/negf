@@ -80,7 +80,6 @@ def compute_self_energies_for_leads(energy, h_l, h_0, h_r, save=True):
 sgf_l = np.load('sgf_l.npy')
 sgf_r = np.load('sgf_r.npy')
 
-
 num_sites = h_0.shape[0]
 
 field = Field(path='/home/mk/gaussian_swarm/gauss_comp/out_ionized.cube')

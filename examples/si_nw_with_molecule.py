@@ -5,9 +5,29 @@ import tb
 from negf.hamiltonian_chain import HamiltonianChain
 from negf.field import Field
 from negf.recursive_greens_functions import recursive_gf
+from ase.visualize.plot import plot_atoms, Matplotlib
+from ase.io import read
 
 
 save_to = './SiNW/'
+
+
+def se(energy, e1, e2):
+    """
+    Simplest self-energy defined as a non-zero complex number in a range of energies (e1, e2)
+
+    :param energy:
+    :param e1:
+    :param e2:
+    :return:
+    """
+
+    ans = 0
+
+    if e1 < energy < e2:
+        ans = -0.01j
+
+    return ans
 
 
 def compute_tb_matrices(input_file, save=save_to):
@@ -53,13 +73,11 @@ def compute_tb_matrices(input_file, save=save_to):
 
 
 def compute_self_energies_for_leads(energy, h_l, h_0, h_r, save=None):
-
     sgf_l = []
     sgf_r = []
     num_sites = h_0.shape[0]
 
     for j, E in enumerate(energy):
-
         L, R = tb.surface_greens_function(E, h_l, h_0, h_r, iterate=True)
 
         test_gf = E * np.identity(num_sites) - h_0 - L - R
@@ -80,43 +98,348 @@ def compute_self_energies_for_leads(energy, h_l, h_0, h_r, save=None):
     return sgf_l, sgf_r
 
 
-h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file='./SiNW/SiNW3/')
-# h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file='/home/mk/TB_project/tb/third_party/SiNW6.xyz')
-# h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file='/home/mk/TB_project/tb/third_party/SiNW7.xyz')
+def visualize(hc, field, size_x_min, size_y_min, size_z_min):
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Rectangle
+    from matplotlib import cm
 
-energy = np.linspace(2.1, 2.2, 50)
-energy = energy[:20]
+    # ----------------------------------------------------------------------------
 
-# sgf_l, sgf_r = compute_self_energies_for_leads(energy, h_l, h_0, h_r, save='./SiNW/SiNW2/')
-# sgf_l = np.load('sgf_l.npy')
-# sgf_r = np.load('sgf_r.npy')
+    slab = read('./SiNW/SiNW2/SiNW2f.xyz', format='xyz')
 
-num_periods = 3
+    # ----------------------------------------------------------------------------
 
-h_chain = HamiltonianChain(h_l, h_0, h_r, coords)
-h_chain.translate([[0, 0, 5.50]], num_periods, num_periods)
+    x = np.linspace(-14, 26, 100)
+    y = np.linspace(-3, 30, 100)
+    z = np.linspace(-20, 20, 100)
 
-# field = Field(path='/home/mk/gaussian_swarm/gauss_comp/out_ionized.cube')
-# field.set_origin(np.array([6.36, 12.86, 2.75]))
+    X = np.meshgrid(x, y, z, indexing='ij')
+    data = field.get_values(np.vstack((X[0].flatten(),
+                                       X[1].flatten(),
+                                       X[2].flatten())).T).reshape(X[0].shape) / 3.8
 
-# h_chain.add_field(field, eps=1)
+    # ----------------------------------------------------------------------------
 
-num_sites = h_0.shape[0]
-num_sites1 = 2 * num_periods * num_sites + num_sites
-num_periods = 2 * num_periods + 1
+    cut_level = 0.01*20
+    data[data > cut_level] = cut_level
+    # data[data < -cut_level] = -cut_level
 
-dos1 = np.zeros((energy.shape[0]))
+    # ----------------------------------------------------------------------------
 
-for j, E in enumerate(energy):
+    n_contours = 21
 
-    L, R = tb.surface_greens_function(E, h_l, h_0, h_r, iterate=True)
-    h_chain.add_self_energies(L, R)
-    grd, grl, gru, gr_left = recursive_gf(E, h_chain.h_l, h_chain.h_0, h_chain.h_r)
-    h_chain.remove_self_energies()
+    norm = cm.colors.Normalize(vmax=cut_level, vmin=-cut_level)
+    # cmap = cm.PRGn
+    # cmap = cm.seismic
+    cmap = cm.coolwarm
+    levels = np.arange(-cut_level * 1.1, cut_level * 1.1, 2 * cut_level / n_contours)
 
-    print("{} of {}: energy is {}".format(j + 1, energy.shape[0], E))
+    # ----------------------------------------------------------------------------
 
-    for jj in range(len(grd)):
-        dos1[j] = dos1[j] + np.real(np.trace(1j * (grd[jj] - grd[jj].H))) / num_periods
+    x = (x, y, z)
 
-print('hi')
+    mins = [max(np.min(hc.coords[:, j]), np.min(x[j])) for j in range(3)]
+    sizes = [min(np.max(hc.coords[:, j]) - mins[j], np.max(x[j]) - mins[j]) for j in range(3)]
+    # inds = [np.argmin(np.abs(x + field._origin_shift[j])) for j in range(3)]
+    inds = [np.argmin(np.abs(x[j] - mins[j] - 0.5 * sizes[j])) for j in range(3)]
+
+    # ----------------------------------------------------------------------------
+
+    # fig, ax = plt.subplots(2, 2, figsize=(10, 10), sharex='all', sharey='all')
+    fig, ax = plt.subplots(2, 2, figsize=(10, 10))
+
+    set_ind = {0, 1, 2}
+
+    shift = 100
+
+    for j1 in range(3):
+        for j2 in range(3):
+            if j1 != j2 and j2 > j1:
+
+                if j1 == 1:
+                    jj2 = j1
+                    jj1 = j2
+                else:
+                    jj1 = j1
+                    jj2 = j2
+
+                j = (set_ind - {j1, j2}).pop()
+
+                cset = ax[max(j2 - j1 - 1, 0), j1].contourf(np.take(X[jj1], inds[j], j)+shift,
+                                                            np.take(X[jj2], inds[j], j)+shift,
+                                                            np.take(data, inds[j], j),
+                                                            levels,
+                                                            norm=norm,
+                                                            cmap=cm.get_cmap(cmap, len(levels) - 1))
+
+                cset = ax[max(j2 - j1 - 1, 0), j1].contour(np.take(X[jj1], inds[j], j)+shift,
+                                                           np.take(X[jj2], inds[j], j)+shift,
+                                                           np.take(data, inds[j], j),
+                                                           levels,
+                                                           norm=norm,
+                                                           colors='k',
+                                                           linewidths=1)
+
+                # ax[max(j2 - j1 - 1, 0), j1].add_patch(Rectangle((mins[jj1]+shift, mins[jj2]+shift),
+                #                                                 sizes[jj1],
+                #                                                 sizes[jj2],
+                #                                                 alpha=1,
+                #                                                 fill=None))
+
+                radii = 0.5
+
+                if j == 0:
+                    rotation = ('0x,90y,0z')
+                    offsets = (size_z_min+shift+radii-5, size_y_min+shift-radii)
+                elif j == 1:
+                    rotation = ('90x,0y,0z')
+                    offsets = (size_x_min+shift-radii, size_z_min+shift+radii-5)
+                else:
+                    rotation = ('0x,0y,0z')
+                    offsets = (size_x_min+shift-radii, size_y_min+shift-radii)
+
+                plot_atoms(slab, ax=ax[max(j2 - j1 - 1, 0), j1], radii=radii, offset=offsets, rotation=rotation)
+
+                ax[max(j2 - j1 - 1, 0), j1].axis('off')
+                ax[max(j2 - j1 - 1, 0), j1].set_ylim(np.min(x[jj2])+shift, np.max(x[jj2])+shift)
+
+                if j1 != jj1:
+                    ax[max(j2 - j1 - 1, 0), j1].set_xlim(np.max(x[jj1])+shift, np.min(x[jj1])+shift)
+                else:
+                    ax[max(j2 - j1 - 1, 0), j1].set_xlim(np.min(x[jj1])+shift, np.max(x[jj1])+shift)
+
+    ax[1, 1].axis('off')
+    plt.tight_layout()
+    plt.show()
+
+
+def visualize1(hc, field, size_x_min, size_y_min, size_z_min):
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Rectangle
+    from matplotlib import cm
+
+    # ----------------------------------------------------------------------------
+
+    slab = read('./SiNW/SiNW2/SiNW2f.xyz', format='xyz')
+
+    # ----------------------------------------------------------------------------
+
+    x = np.linspace(-14, 26, 100)
+    y = np.linspace(-3, 30, 100)
+    z = np.linspace(-20, 20, 100)
+
+    X = np.meshgrid(x, y, z, indexing='ij')
+    data = field.get_values(np.vstack((X[0].flatten(),
+                                       X[1].flatten(),
+                                       X[2].flatten())).T).reshape(X[0].shape) / 3.8
+
+    # ----------------------------------------------------------------------------
+
+    cut_level = 0.01*20
+    data[data > cut_level] = cut_level
+    # data[data < -cut_level] = -cut_level
+
+    # ----------------------------------------------------------------------------
+
+    n_contours = 21
+
+    norm = cm.colors.Normalize(vmax=cut_level, vmin=-cut_level)
+    # cmap = cm.PRGn
+    # cmap = cm.seismic
+    cmap = cm.coolwarm
+    levels = np.arange(-cut_level * 1.1, cut_level * 1.1, 2 * cut_level / n_contours)
+
+    # ----------------------------------------------------------------------------
+
+    x = (x, y, z)
+
+    mins = [max(np.min(hc.coords[:, j]), np.min(x[j])) for j in range(3)]
+    sizes = [min(np.max(hc.coords[:, j]) - mins[j], np.max(x[j]) - mins[j]) for j in range(3)]
+    # inds = [np.argmin(np.abs(x + field._origin_shift[j])) for j in range(3)]
+    inds = [np.argmin(np.abs(x[j] - mins[j] - 0.5 * sizes[j])) for j in range(3)]
+
+    # ----------------------------------------------------------------------------
+
+    set_ind = {0, 1, 2}
+
+    shift = 100
+
+    for j1 in range(3):
+        for j2 in range(3):
+            if j1 != j2 and j2 > j1:
+
+                if j1 == 1:
+                    jj2 = j1
+                    jj1 = j2
+                else:
+                    jj1 = j1
+                    jj2 = j2
+
+                j = (set_ind - {j1, j2}).pop()
+
+                fig, ax = plt.subplots(figsize=(10, 10))
+
+                cset = ax.contourf(np.take(X[jj1], inds[j], j)+shift,
+                                                            np.take(X[jj2], inds[j], j)+shift,
+                                                            np.take(data, inds[j], j),
+                                                            levels,
+                                                            norm=norm,
+                                                            cmap=cm.get_cmap(cmap, len(levels) - 1))
+
+                cset = ax.contour(np.take(X[jj1], inds[j], j)+shift,
+                                                           np.take(X[jj2], inds[j], j)+shift,
+                                                           np.take(data, inds[j], j),
+                                                           levels,
+                                                           norm=norm,
+                                                           colors='k',
+                                                           linewidths=1)
+
+                # ax[max(j2 - j1 - 1, 0), j1].add_patch(Rectangle((mins[jj1]+shift, mins[jj2]+shift),
+                #                                                 sizes[jj1],
+                #                                                 sizes[jj2],
+                #                                                 alpha=1,
+                #                                                 fill=None))
+
+                radii = 0.5
+
+                if j == 0:
+                    rotation = ('0x,90y,0z')
+                    offsets = (size_z_min+shift+radii-5, size_y_min+shift-radii)
+                elif j == 1:
+                    rotation = ('90x,0y,0z')
+                    offsets = (size_x_min+shift-radii, size_z_min+shift+radii-5)
+                else:
+                    rotation = ('0x,0y,0z')
+                    offsets = (size_x_min+shift-radii, size_y_min+shift-radii)
+
+                plot_atoms(slab, ax=ax, radii=radii, offset=offsets, rotation=rotation)
+
+                ax.axis('off')
+                ax.set_ylim(np.min(x[jj2])+shift, np.max(x[jj2])+shift)
+
+                if j1 != jj1:
+                    ax.set_xlim(np.max(x[jj1])+shift, np.min(x[jj1])+shift)
+                else:
+                    ax.set_xlim(np.min(x[jj1])+shift, np.max(x[jj1])+shift)
+
+                plt.tight_layout()
+                plt.show()
+
+
+def main(spacing, mol_path, nw_path, eps):
+
+    # ---------------------------------------------------------------------------------
+    # ----------------------- compute tight-binding matrices --------------------------
+    # ---------------------------------------------------------------------------------
+
+    h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file=nw_path)
+    # h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file='/home/mk/TB_project/tb/third_party/SiNW6.xyz')
+    # h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file='/home/mk/TB_project/tb/third_party/SiNW7.xyz')
+
+    energy = np.linspace(2.1, 2.15, 50)
+    # energy = energy[:30]
+
+    # ---------------------------------------------------------------------------------
+    # ------- pre-compute/pre-load self-energies for the leads from the disk ----------
+    # ---------------------------------------------------------------------------------
+
+    # sgf_l, sgf_r = compute_self_energies_for_leads(energy, h_l, h_0, h_r, save='./SiNW/SiNW2/')
+    # sgf_l = np.load('sgf_l.npy')
+    # sgf_r = np.load('sgf_r.npy')
+
+    # ---------------------------------------------------------------------------------
+    # ---------------------------- make a chain Hamiltonian ---------------------------
+    # ---------------------------------------------------------------------------------
+
+    num_periods = 3  # number of unit cells in the device region num_periods * 2 + 1
+
+    h_chain = HamiltonianChain(h_l, h_0, h_r, coords)
+    h_chain.translate([[0, 0, 5.50]], num_periods, num_periods)
+
+    # ---------------------------------------------------------------------------------
+    # --------------------- make a Field object from the cube file --------------------
+    # ---------------------------------------------------------------------------------
+
+    field = Field(path=mol_path)
+    # field.rotate('z',  1.13446)
+    # field.rotate('z',  np.pi / 2.0)
+    # field.rotate('x',  np.pi / 2.0)
+    # field.rotate('y',  0.436332)     # 25 degrees
+
+    angle = 1.13446
+
+    field.rotate('x', angle)  # 65 degrees
+    field.rotate('y', np.pi / 2.0)
+
+    # field.set_origin(np.array([6.36, 11.86, 2.75]))
+    # field.set_origin(np.array([-11.82 - 11.5, 0.0, 5.91]))
+
+    size_x_min = np.min(coords[:, 0])
+    size_x_max = np.max(coords[:, 0])
+    size_y_min = np.min(coords[:, 1])
+    size_y_max = np.max(coords[:, 1])
+    size_z_min = -np.max(coords[:, 2]) * 4
+    size_z_max = np.max(coords[:, 2]) * 3
+
+    _, mol_coords = field.get_atoms()
+    mol_y_length = np.max(mol_coords[:, 1]) - np.min(mol_coords[:, 1])
+    mol_y_length = mol_y_length * np.sin(angle)
+    mol_z_length = mol_y_length * np.cos(angle)
+
+    field.set_origin(np.array([0.5 * (size_x_max - np.abs(size_y_min)),
+                               size_y_max + 0.5 * mol_y_length + spacing,
+                               0.5*mol_z_length]))
+
+    # ---------------------------------------------------------------------------------
+    # ------------------- add field to the Hamiltonian and visualize ------------------
+    # ---------------------------------------------------------------------------------
+
+    h_chain.add_field(field, eps=eps)
+    # visualize1(h_chain, field, size_x_min, size_y_min, size_z_min)
+
+    # ---------------------------------------------------------------------------------
+    # -------------------- compute Green's functions of the system --------------------
+    # ---------------------------------------------------------------------------------
+
+    num_periods = 2 * num_periods + 1
+
+    dos1 = np.zeros((energy.shape[0]))
+    dens = np.zeros((energy.shape[0], num_periods))
+
+    ef1 = 2.1
+    ef2 = 2.1
+    tempr = 100
+
+    for j, E in enumerate(energy):
+
+        L, R = tb.surface_greens_function(E, h_l, h_0, h_r, iterate=5)
+
+        # L = L + se(E, 2.0, 2.125)
+        # R = R + se(E, 2.0, 2.125)
+
+        h_chain.add_self_energies(L, R, energy=E, tempr=tempr, ef1=ef1, ef2=ef2)
+        grd, grl, gru, gr_left, gnd, gnl, gnu, gn_left = recursive_gf(E,
+                                                                      h_chain.h_l,
+                                                                      h_chain.h_0,
+                                                                      h_chain.h_r,
+                                                                      s_in=h_chain.sgf)
+        h_chain.remove_self_energies()
+
+        for jj in range(num_periods):
+            dos1[j] = dos1[j] + np.real(np.trace(1j * (grd[jj] - grd[jj].H))) / num_periods
+            dens[j, jj] = 2 * np.trace(gnd[jj])
+
+        print("{} of {}: energy is {}".format(j + 1, energy.shape[0], E))
+
+        for jj in range(len(grd)):
+            dos1[j] = dos1[j] + np.real(np.trace(1j * (grd[jj] - grd[jj].H))) / num_periods
+
+    print('hi')
+
+
+if __name__ == '__main__':
+
+    main(spacing=1.0,
+         mol_path='/home/mk/tetracene_dft_wB_pcm_38_32_anion.cube',
+         nw_path='./SiNW/SiNW2/',
+         eps=3.8)

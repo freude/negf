@@ -1,5 +1,8 @@
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
+import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
+from matplotlib import rc
 
 
 def _getline(cube):
@@ -62,6 +65,7 @@ class Field(object):
         self._cube = []
         self._origin_has_changed = False
         self._rot_mat = []
+        self._atoms = []
 
         if path.endswith('.cube') or path.endswith('.cub'):
 
@@ -77,6 +81,7 @@ class Field(object):
 
             self.origin = (0, 0, 0)
             self._shape = shape
+            self._atoms = meta['atoms']
 
         data[data > 1] = 1
         self._interpolant = RegularGridInterpolator((x, y, z), data, bounds_error=False)
@@ -117,6 +122,10 @@ class Field(object):
 
         self._rot_mat.append(rot_mat)
 
+    def reset_rotations(self):
+
+        self._rot_mat = []
+
     def get_values(self, coords1, translate=None):
 
         coords = coords1.copy()
@@ -127,19 +136,30 @@ class Field(object):
         for j in range(len(coords)):
             coords[j] += self.origin
 
-            if len(self._rot_mat) > 0:
-                for item in self._rot_mat:
-                    coords[j] = np.array(np.matrix(item) * np.matrix(coords[j].T)).T
-
             if self._origin_has_changed:
-                coords[j] -= self._origin_shift
+                coords[j] = coords[j] - self._origin_shift
 
             if isinstance(translate, np.ndarray):
-                coords[j] -= np.squeeze(translate)
+                coords[j] = coords[j] - np.squeeze(translate)
+
+            if len(self._rot_mat) > 0:
+                for item in self._rot_mat:
+                    coords[j] = np.array(np.matrix(item) * np.matrix(coords[j]).T).T[0]
 
         values = self._interpolant(coords)
 
         return np.nan_to_num(values)
+
+    def get_atoms(self):
+
+        ind = []
+        coords = []
+
+        for item in self._atoms:
+            ind.append(item[0])
+            coords.append(item[1][1:])
+
+        return np.array(ind), np.array(coords)
 
 
 class Field1D(object):
@@ -203,9 +223,12 @@ def main1():
 
     import matplotlib.pyplot as plt
 
-    fl = Field(path='/home/mk/gaussian_swarm/gauss_comp/wB_ion.cube')
-    fl = Field(path='../cubefil.cube')
-    fl1 = Field(path='/home/mk/gaussian_swarm/gauss_comp/cam_ion.cube')
+    # fl = Field(path='/home/mk/gaussian_swarm/gauss_comp/wB_ion.cube')
+    # fl = Field(path='../cubefil.cube')
+    # fl1 = Field(path='/home/mk/gaussian_swarm/gauss_comp/cam_ion.cube')
+
+    fl = Field(path='/home/mk/tetracene_dft_wB_pcm_38_32.cube')
+    fl1 = Field(path='/home/mk/tetracene_dft_wB_pcm_38_32_wpcm.cube')
 
     x = np.linspace(fl._cube[0][0], fl._cube[1][0], fl._shape[0])
     y = np.linspace(fl._cube[0][1], fl._cube[1][1], fl._shape[1])
@@ -223,22 +246,114 @@ def main1():
     # # plt.contour(data[:, 50, :], levels=(0.04, 0.06, 0.08, 0.1, 0.2))
     # plt.show()
 
-    fl.set_origin(np.array([0.0, 0.0, 1.0]))
-    fl1.set_origin(np.array([0.0, 0.0, 1.0]))
+    # fl.set_origin(np.array([0.0, 0.0, 1.0]))
+    # fl1.set_origin(np.array([0.0, 0.0, 1.0]))
 
+    fl.set_origin(np.array([6.36, 11.86, 2.75]))
+    fl.rotate('z', 1.13446)     # 65 degrees
     data = fl.get_values(np.vstack((X.flatten(), Y.flatten(), Z.flatten())).T)
     data = data.reshape(X.shape)
 
     data1 = fl1.get_values(np.vstack((X.flatten(), Y.flatten(), Z.flatten())).T)
     data1 = data1.reshape(X.shape)
 
-    plt.imshow(data[:, :, 100])
+    # plt.imshow(data[:, :, 100])
 
-    # plt.contour(data[:, 50, :], levels=(0.04, 0.06, 0.08, 0.1, 0.2))
+    cut_level = 0.015
+
+    data1[data1 > cut_level] = cut_level
+    data[data > cut_level] = cut_level
+
+    from matplotlib import cm
+    norm = cm.colors.Normalize(vmax=cut_level, vmin=-cut_level)
+    # cmap = cm.PRGn
+    # cmap = cm.seismic
+    cmap = cm.coolwarm
+    levels = np.arange(-cut_level * 1.1, cut_level * 1.1, 0.002)
+    cset = plt.contourf(X[:, :, 100], Y[:, :, 100], data[:, :, 100], levels, norm=norm, cmap=cm.get_cmap(cmap, len(levels) - 1))
+
+    from matplotlib.patches import Rectangle
+    currentAxis = plt.gca()
+    someX = -5
+    someY = -5
+    width = 10
+    height = 10
+    currentAxis.add_patch(Rectangle((someX, someY), width, height,
+                                    alpha=1, fill=None))
 
     plt.show()
+
+    print('hi')
+
+
+# class nf(float):
+#     def __repr__(self):
+#         str = '%.3f eV' % (self.__float__(),)
+#         if str[-1] == '0':
+#             return '%.2f eV' % self.__float__()
+#         else:
+#             return '%.3f eV' % self.__float__()
+
+
+class nf(float):
+    def __repr__(self):
+        if self.__float__() == 0.0:
+            return '0.0'
+        else:
+            return '%.1e eV' % (self.__float__(),)
+
+
+def plot(x, y, data, data1, cut_level, n_contours):
+
+    X, Y = np.meshgrid(x, y, indexing='ij')
+
+    data[data > cut_level] = cut_level
+
+    from matplotlib import cm
+    norm = cm.colors.Normalize(vmax=cut_level, vmin=-cut_level)
+    # cmap = cm.PRGn
+    # cmap = cm.seismic
+    cmap = cm.coolwarm
+    levels = np.arange(-cut_level * 1.1, cut_level * 1.1, 2 * cut_level / n_contours)
+    # levels = np.linspace(-0.1, 0.1, 21)
+    # levels = np.linspace(-0.01, 0.01, 21)
+    fig, ax = plt.subplots(figsize=(10, 10))
+    cset = ax.contourf(X, Y, data, levels, norm=norm,
+                        cmap=cm.get_cmap(cmap, len(levels) - 1))
+    cset = ax.contour(X, Y, data, levels, norm=norm,
+                        colors='r', linewidths=1)
+
+    cset = ax.contour(X, Y, data1, levels, norm=norm, colors='k')
+
+    # Recast levels to new class
+    cset.levels = [nf(val) for val in cset.levels]
+
+    # Label levels with specially formatted floats
+
+    fmt = '%r'
+
+    ax.clabel(cset, cset.levels[9:-9], inline=True, fmt=fmt, fontsize=14)
+    # ax.clabel(cset, cset.levels, inline=True, fmt=fmt, fontsize=14)
+    ax.axis('off')
+    l = mlines.Line2D([10, 15], [-15, -15], linewidth=3, color='k')
+    ax.add_line(l)
+    rc('font', **{'family': 'monospace', 'weight': 'bold'})
+    rc('text', usetex=True)
+    ax.text(12, -14.4, r'$5 \mathring{A}$', fontsize=16)
 
 
 if __name__ == '__main__':
 
     main1()
+
+    # path = '/home/mk/tetracene_dft_wB_pcm_38_32.cube'
+    # data, meta = read_cube(path)
+    # path = '/home/mk/tetracene_dft_wB_pcm_38_32_wpcm.cube'
+    # data1, meta = read_cube(path)
+    # x = np.linspace(0.0, meta['xvec'][0] * data.shape[0], data.shape[0]) - 0.5 * meta['xvec'][0] * data.shape[0]
+    # data = data.reshape((len(x), len(x), len(x)))
+    # cut_level = 0.015
+    # cut_level = 0.01
+    # plot(x, x, data[:, 100, :] / 3.8, data1[:, 100, :] / 3.8, cut_level, 20)
+    # # plot(x, x, data1[:, 100, :] / 3.8, cut_level, 20)
+    # plt.show()
