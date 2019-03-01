@@ -404,6 +404,7 @@ def main(spacing, mol_path, nw_path, eps):
     num_periods = 2 * num_periods + 1
 
     dos1 = np.zeros((energy.shape[0]))
+    tr = np.zeros((energy.shape[0]))
     dens = np.zeros((energy.shape[0], num_periods))
 
     ef1 = 2.1
@@ -428,11 +429,14 @@ def main(spacing, mol_path, nw_path, eps):
         for jj in range(num_periods):
             dos1[j] = dos1[j] + np.real(np.trace(1j * (grd[jj] - grd[jj].H))) / num_periods
             dens[j, jj] = 2 * np.trace(gnd[jj])
+            gamma_l = 1j * (np.matrix(L) - np.matrix(R).H)
+            gamma_r = 1j * (np.matrix(R) - np.matrix(L).H)
+            tr[j] = tr[j] + np.real(np.trace(gamma_l * grd[jj] * gamma_r * grd[jj].H))
 
         print("{} of {}: energy is {}".format(j + 1, energy.shape[0], E))
 
-        for jj in range(len(grd)):
-            dos1[j] = dos1[j] + np.real(np.trace(1j * (grd[jj] - grd[jj].H))) / num_periods
+        # for jj in range(len(grd)):
+        #     dos1[j] = dos1[j] + np.real(np.trace(1j * (grd[jj] - grd[jj].H))) / num_periods
 
     print('hi')
 
