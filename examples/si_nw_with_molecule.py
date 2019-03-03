@@ -394,7 +394,7 @@ def main(spacing, mol_path, nw_path, eps):
     # ------------------- add field to the Hamiltonian and visualize ------------------
     # ---------------------------------------------------------------------------------
 
-    h_chain.add_field(field, eps=eps)
+    # h_chain.add_field(field, eps=eps)
     # visualize1(h_chain, field, size_x_min, size_y_min, size_z_min)
 
     # ---------------------------------------------------------------------------------
@@ -429,8 +429,8 @@ def main(spacing, mol_path, nw_path, eps):
         for jj in range(num_periods):
             dos1[j] = dos1[j] + np.real(np.trace(1j * (grd[jj] - grd[jj].H))) / num_periods
             dens[j, jj] = 2 * np.trace(gnd[jj])
-            gamma_l = 1j * (np.matrix(L) - np.matrix(R).H)
-            gamma_r = 1j * (np.matrix(R) - np.matrix(L).H)
+            gamma_l = 1j * (np.matrix(L) - np.matrix(L).H)
+            gamma_r = 1j * (np.matrix(R) - np.matrix(R).H)
             tr[j] = tr[j] + np.real(np.trace(gamma_l * grd[jj] * gamma_r * grd[jj].H))
 
         print("{} of {}: energy is {}".format(j + 1, energy.shape[0], E))
