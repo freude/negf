@@ -326,7 +326,14 @@ def visualize1(hc, field, size_x_min, size_y_min, size_z_min):
                 plt.show()
 
 
-def main(spacing, mol_path, nw_path, eps):
+def main(spacing, mol_path, nw_path, eps, comm=0):
+
+    if comm:
+        rank = comm.Get_rank()
+        size = comm.Get_size()
+    else:
+        rank = 0
+        size = 1
 
     # ---------------------------------------------------------------------------------
     # ----------------------- compute tight-binding matrices --------------------------
@@ -394,7 +401,7 @@ def main(spacing, mol_path, nw_path, eps):
     # ------------------- add field to the Hamiltonian and visualize ------------------
     # ---------------------------------------------------------------------------------
 
-    # h_chain.add_field(field, eps=eps)
+    h_chain.add_field(field, eps=eps)
     # visualize1(h_chain, field, size_x_min, size_y_min, size_z_min)
 
     # ---------------------------------------------------------------------------------
@@ -403,15 +410,19 @@ def main(spacing, mol_path, nw_path, eps):
 
     num_periods = 2 * num_periods + 1
 
-    dos1 = np.zeros((energy.shape[0]))
+    dos = np.zeros((energy.shape[0]))
     tr = np.zeros((energy.shape[0]))
     dens = np.zeros((energy.shape[0], num_periods))
+
+    par_data = []
 
     ef1 = 2.1
     ef2 = 2.1
     tempr = 100
 
     for j, E in enumerate(energy):
+        if j % size != rank:
+            continue
 
         L, R = tb.surface_greens_function(E, h_l, h_0, h_r, iterate=5)
 
@@ -427,18 +438,31 @@ def main(spacing, mol_path, nw_path, eps):
         h_chain.remove_self_energies()
 
         for jj in range(num_periods):
-            dos1[j] = dos1[j] + np.real(np.trace(1j * (grd[jj] - grd[jj].H))) / num_periods
-            dens[j, jj] = 2 * np.trace(gnd[jj])
+            dos[j] = dos[j] + np.real(np.trace(1j * (grd[jj] - grd[jj].H))) / num_periods
+            dens[j, jj] = 2 * np.trace(gnd[jj]) / num_periods
             gamma_l = 1j * (np.matrix(L) - np.matrix(L).H)
             gamma_r = 1j * (np.matrix(R) - np.matrix(R).H)
-            tr[j] = tr[j] + np.real(np.trace(gamma_l * grd[jj] * gamma_r * grd[jj].H))
+            tr[j] = tr[j] + np.real(np.trace(gamma_l * grd[jj] * gamma_r * grd[jj].H)) / num_periods
 
         print("{} of {}: energy is {}".format(j + 1, energy.shape[0], E))
 
-        # for jj in range(len(grd)):
-        #     dos1[j] = dos1[j] + np.real(np.trace(1j * (grd[jj] - grd[jj].H))) / num_periods
+        if comm:
+            par_data.append({'id': j, 'dos': dos[j], 'tr': tr[j], 'dens': dens[j]})
 
-    print('hi')
+    if comm:
+        par_data = comm.reduce(par_data, root=0)
+        if rank == 0:
+            ids = [par_data[item]['id'] for item in range(len(par_data))]
+            dos = [x['dos'] for _, x in sorted(zip(ids, par_data))]
+            tr = [x['tr'] for _, x in sorted(zip(ids, par_data))]
+            dens = [x['dens'] for _, x in sorted(zip(ids, par_data))]
+            dos = np.array(dos)
+            tr = np.array(tr)
+            dens = np.array(dens)
+
+            # np.save('dos.npy', dos)
+
+    return dos, tr, dens
 
 
 if __name__ == '__main__':
