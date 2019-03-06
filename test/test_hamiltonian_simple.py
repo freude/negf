@@ -19,7 +19,7 @@ def compute_self_energies_for_leads(energy, h_l, h_0, h_r, save=True):
     num_sites = h_0.shape[0]
 
     for j, E in enumerate(energy):
-        L, R = tb.surface_greens_function(E, h_l, h_0, h_r)
+        L, R = tb.surface_greens_function(E, h_l, h_0, h_r, iterate=5)
 
         test_gf = E * np.identity(num_sites) - h_0 - L - R
         metrics = np.linalg.cond(test_gf)
@@ -45,13 +45,13 @@ def compute_self_energies_for_leads(energy, h_l, h_0, h_r, save=True):
     return sgf_l, sgf_r
 
 
-h_l = 0.1 * np.array([[0.0, 1.0],
+h_l = np.matrix([[0.0, 1.0],
                       [0.0, 0.0]])
 
-h_0 = 0.1 * np.array([[3.0, 1.0],
+h_0 = np.matrix([[3.0, 1.0],
                       [1.0, 2.0]])
 
-h_r = 0.1 * np.array([[0.0, 0.0],
+h_r = np.matrix([[0.0, 0.0],
                       [1.0, 0.0]])
 
 coords = np.array([[0.0, 0.0, 0.0],
@@ -66,7 +66,7 @@ field.set_origin(np.array([0.0, 5.0, 0.0]))
 h = HamiltonianChain(h_l, h_0, h_r, coords)
 
 period = np.array([0.0, 0.0, 0.5])
-h.translate(period, 7, 7)
+h.translate(period, 3, 3)
 # h.add_field(field, eps=1)
 
 plt.imshow(h.get_matrix())
@@ -74,9 +74,9 @@ plt.show()
 
 h_d = h.get_matrix()
 
-energy = np.linspace(0, 1, 150)
+energy = np.linspace(0, 5, 150)
 
-sgf_l, sgf_r = compute_self_energies_for_leads(energy, h_l, h_0, h_r, save=True)
+sgf_l, sgf_r = compute_self_energies_for_leads(energy, h_l, h_0, h_r, save=False)
 
 mat_l_list, mat_d_list, mat_u_list = h.h_l, h.h_0, h.h_r
 
@@ -85,33 +85,23 @@ mat_l_list, mat_d_list, mat_u_list = h.h_l, h.h_0, h.h_r
 tr = np.zeros((energy.shape[0]), dtype=np.complex)
 dos = np.zeros((energy.shape[0]), dtype=np.complex)
 
-from negf.recursive_greens_functions import recursive_gf
-
 for j, E in enumerate(energy):
     print(j)
 
     mat_d_list[0] = mat_d_list[0] + sgf_r[j, :, :]
     mat_d_list[-1] = mat_d_list[-1] + sgf_l[j, :, :]
 
-    grd, grl, gru, gr_left = recursive_gf(E, mat_d_list, mat_u_list, mat_l_list)
+    g_trans, grd, grl, gru, gr_left = recursive_gf(E, mat_l_list, mat_d_list, mat_u_list)
 
     mat_d_list[0] = mat_d_list[0] - sgf_r[j, :, :]
     mat_d_list[-1] = mat_d_list[-1] - sgf_l[j, :, :]
 
     for jj in range(len(grd)):
+        dos[j] = dos[j] + np.real(np.trace(1j * (grd[jj] - grd[jj].H)))
 
-        if jj == 0:
-            gamma_l = 1j * (np.matrix(sgf_r[j, :, :]) - np.matrix(sgf_r[j, :, :]).H)
-            gamma_r = sgf_l[j, :, :] * 0
-        elif jj == len(grd)-1:
-            gamma_r = 1j * (np.matrix(sgf_l[j, :, :]) - np.matrix(sgf_l[j, :, :]).H)
-            gamma_l = sgf_l[j, :, :] * 0
-        else:
-            gamma_r = sgf_l[j, :, :] * 0
-            gamma_l = sgf_l[j, :, :] * 0
-
-        dos[j] += np.real(np.trace(1j * (grd[jj] - grd[jj].H)))
-        tr[j] += np.real(np.trace(gamma_l * grd[jj] * gamma_r * grd[jj].H))
+    gamma_l = 1j * (np.matrix(sgf_r[j, :, :]) - np.matrix(sgf_r[j, :, :]).H)
+    gamma_r = 1j * (np.matrix(sgf_l[j, :, :]) - np.matrix(sgf_l[j, :, :]).H)
+    tr[j] = np.real(np.trace(gamma_l * g_trans * gamma_r * g_trans.H))
 
 # zeros = np.zeros(h_0.shape)
 #

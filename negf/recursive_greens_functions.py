@@ -82,11 +82,13 @@ def recursive_gf(energy, mat_l_list, mat_d_list, mat_u_list, s_in=0, s_out=0):
     grl = [None for _ in range(num_of_matrices-1)]
     gru = [None for _ in range(num_of_matrices-1)]
     grd = copy.copy(gr_left)                                       # Our glorious benefactor.
+    g_trans = copy.copy(gr_left[len(gr_left)-1])
 
     for q in range(num_of_matrices - 2, -1, -1):                   # Recursive algorithm
         grl[q] = grd[q + 1] * mat_l_list[q] * gr_left[q]           # (B5) We get the off-diagonal blocks for free.
         gru[q] = gr_left[q] * mat_u_list[q] * grd[q + 1]           # (B6) because we need .Tthem.T for the next calc:
         grd[q] = gr_left[q] + gr_left[q] * mat_u_list[q] * grl[q]  # (B4) I suppose I could also use the lower.
+        g_trans = gr_left[q] * mat_u_list[q] * g_trans
 
     # -------------------------------------------------------------------
     # ------ compute the electron correlation function if needed --------
@@ -154,17 +156,21 @@ def recursive_gf(energy, mat_l_list, mat_d_list, mat_u_list, s_in=0, s_out=0):
     # -------------------------------------------------------------------
 
     if not isinstance(s_in, list) and not isinstance(s_out, list):
-        return grd, grl, gru, gr_left
+        return g_trans, \
+               grd, grl, gru, gr_left
 
     elif isinstance(s_in, list) and not isinstance(s_out, list):
-        return grd, grl, gru, gr_left, \
+        return g_trans, \
+               grd, grl, gru, gr_left, \
                gnd, gnl, gnu, gin_left
 
     elif not isinstance(s_in, list) and isinstance(s_out, list):
-        return grd, grl, gru, gr_left, \
+        return g_trans, \
+               grd, grl, gru, gr_left, \
                gpd, gpl, gpu, gip_left
 
     else:
-        return grd, grl, gru, gr_left, \
+        return g_trans, \
+               grd, grl, gru, gr_left, \
                gnd, gnl, gnu, gin_left, \
                gpd, gpl, gpu, gip_left

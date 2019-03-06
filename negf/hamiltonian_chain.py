@@ -1,8 +1,7 @@
 import numpy as np
 from scipy.linalg import block_diag
-import matplotlib.pyplot as plt
-from .field import Field
-from .recursive_greens_functions import recursive_gf
+from negf.aux_functions import yaml_parser
+from negf.field import Field
 
 
 def fd(energy, ef, temp):
@@ -24,7 +23,7 @@ class HamiltonianChain(object):
         self.elem_length = None
         self.left_translations = None
         self.right_translations = None
-        self.field = None
+        self.fields = None
         self.sgf_l = None
         self.sgf_r = None
 
@@ -66,26 +65,32 @@ class HamiltonianChain(object):
 
     def add_field(self, field, eps=7.0):
 
-        self.field = []
+        field_buf = []
 
         for jjj in range(self.left_translations, 0, -1):
-            self.field.append(field.get_values(self._coords, translate=jjj * self.elem_length) / eps)
+            field_buf.append(field.get_values(self._coords, translate=jjj * self.elem_length) / eps)
 
-        self.field.append(field.get_values(self._coords) / eps)
+        field_buf.append(field.get_values(self._coords) / eps)
 
         for jjj in range(1, self.right_translations + 1):
-            self.field.append(field.get_values(self._coords, translate=-jjj * self.elem_length) / eps)
+            field_buf.append(field.get_values(self._coords, translate=-jjj * self.elem_length) / eps)
 
-        self.field = np.array(self.field)
+        field_buf = np.array(field_buf)
+
+        if not isinstance(self.fields, list):
+            self.fields = []
+
+        self.fields.append(field_buf)
 
         for jjj in range(len(self.h_0)):
-            self.h_0[jjj] = self.h_0[jjj] + np.diag(self.field[jjj])
+            self.h_0[jjj] = self.h_0[jjj] + np.diag(field_buf[jjj])
 
     def remove_field(self):
 
-        if isinstance(self.field, list):
-            for jjj in range(len(self.h_0)):
-                self.h_0[jjj] = self.h_0[jjj] - np.diag(self.field[jjj])
+        if isinstance(self.fields, list):
+            for item in self.fields:
+                for jjj in range(len(self.h_0)):
+                    self.h_0[jjj] = self.h_0[jjj] - np.diag(item[jjj])
 
         self.field = None
 
@@ -142,3 +147,111 @@ class HamiltonianChain(object):
             matrix[(j + 1) * s1:(j + 2) * s1, j * s2:(j + 1) * s2] = self.h_l[j]
 
         return matrix
+
+
+class HamiltonianChainComposer(HamiltonianChain):
+
+    def __init__(self, h_l, h_0, h_r, coords, params):
+        super(HamiltonianChainComposer, self).__init__(h_l, h_0, h_r, coords)
+
+        self.translate(params['unit_cell'], params['left_translations'], params['right_translations'])
+
+        uc = np.array(params['unit_cell'])
+
+        if 'fields' in params:
+
+            dict_of_fields = {}
+
+            for item in params['fields']['xyz']:
+
+                field = list(item.keys())[0]
+
+                if field in dict_of_fields:
+                    dict_of_fields[field].set_origin(dict_of_fields[field].mean_coords + np.array(item['field']))
+                else:
+                    dict_of_fields[field] = Field(path=params['fields'][field])
+                    # angle = 1.13446
+                    angle = params['fields']['angle']
+
+                    dict_of_fields[field].rotate('x', angle)  # 65 degrees
+                    dict_of_fields[field].rotate('y', np.pi / 2.0)
+
+                    size_x_max = np.max(coords[:, 0])
+                    size_y_min = np.min(coords[:, 1])
+                    size_y_max = np.max(coords[:, 1])
+
+                    _, mol_coords = dict_of_fields[field].get_atoms()
+                    mol_y_length = np.max(mol_coords[:, 1]) - np.min(mol_coords[:, 1])
+                    mol_y_length = mol_y_length * np.sin(angle)
+                    mol_z_length = mol_y_length * np.cos(angle)
+
+                    dict_of_fields[field].mean_coords = np.array([0.5 * (size_x_max - np.abs(size_y_min)),
+                                                                  size_y_max + 0.5 * mol_y_length +
+                                                                  params['fields']['spacing'],
+                                                                  0.5 * mol_z_length])
+
+                    dict_of_fields[field].set_origin(dict_of_fields[field].mean_coords + np.array(item[field]))
+
+                # self.add_field(dict_of_fields[field], eps=params['fields']['eps'])
+
+    def visualize(self):
+
+        import matplotlib.pyplot as plt
+        from matplotlib import cm
+        from scipy.interpolate import RegularGridInterpolator
+
+        vals = np.hstack(tuple([np.diag(item) for item in self.fields]))
+
+        self.remove_field()
+
+        vals1 = np.hstack(tuple([np.diag(item) for item in self.h_0]))
+
+        from mpl_toolkits.mplot3d import Axes3D
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        norm = cm.colors.Normalize(vmax=np.abs(np.max((vals-vals1))), vmin=-np.abs(np.min((vals-vals1))))
+
+        ax.scatter(self.coords[:, 0], self.coords[:, 1], self.coords[:, 2],
+                   c=vals-vals1, marker='o', norm=norm, cmap=cm.get_cmap(cm.coolwarm))
+        print('hi')
+        # interpolant = RegularGridInterpolator(self.coords_entire, vals, bounds_error=False)
+        #
+        # x = np.linspace(-14, 26, 100)
+        # y = np.linspace(-3, 30, 100)
+        # z = np.linspace(-20, 20, 100)
+        #
+        # X = np.meshgrid(x, y, z, indexing='ij')
+        # values = interpolant(np.vstack((X[0].flatten(),
+        #                                 X[1].flatten(),
+        #                                 X[2].flatten())).T).reshape(X[0].shape)
+        #
+        # plt.imshow(values)
+
+
+if __name__ == '__main__':
+
+    fields_config = """
+    
+    unit_cell:        [[0, 0, 5.50]]
+    
+    left_translations:     3
+    right_translations:    3
+    
+    fields:
+    
+        eps = 3.8
+    
+        cation:      '/home/mk/tetracene_dft_wB_pcm_38_32_cation.cube'
+        anion:       '/home/mk/tetracene_dft_wB_pcm_38_32_cation.cube'
+        
+        angle:       1.13446
+        spacing:     1.0
+        
+        xyz:
+            - cation:       [0.0000000000,    0.0000000000,    0.0000000000]
+            - anion:        [1.3750000000,    1.3750000000,    1.3750000000] 
+        """
+
+    params = yaml_parser(fields_config)
+    print('hi')

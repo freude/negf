@@ -2,11 +2,12 @@ import os
 import shutil
 import numpy as np
 import tb
-from negf.hamiltonian_chain import HamiltonianChain
+from negf.hamiltonian_chain import HamiltonianChain, HamiltonianChainComposer
 from negf.field import Field
 from negf.recursive_greens_functions import recursive_gf
 from ase.visualize.plot import plot_atoms, Matplotlib
 from ase.io import read
+from negf.aux_functions import yaml_parser
 
 
 save_to = './SiNW/'
@@ -26,6 +27,8 @@ def se(energy, e1, e2):
 
     if e1 < energy < e2:
         ans = -0.01j
+
+    ans = -0.007j
 
     return ans
 
@@ -344,7 +347,7 @@ def main(spacing, mol_path, nw_path, eps, comm=0):
     # h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file='/home/mk/TB_project/tb/third_party/SiNW7.xyz')
 
     energy = np.linspace(2.1, 2.15, 50)
-    # energy = energy[:30]
+    energy = energy[15:30]
 
     # ---------------------------------------------------------------------------------
     # ------- pre-compute/pre-load self-energies for the leads from the disk ----------
@@ -401,7 +404,7 @@ def main(spacing, mol_path, nw_path, eps, comm=0):
     # ------------------- add field to the Hamiltonian and visualize ------------------
     # ---------------------------------------------------------------------------------
 
-    h_chain.add_field(field, eps=eps)
+    # h_chain.add_field(field, eps=eps)
     # visualize1(h_chain, field, size_x_min, size_y_min, size_z_min)
 
     # ---------------------------------------------------------------------------------
@@ -430,7 +433,7 @@ def main(spacing, mol_path, nw_path, eps, comm=0):
         # R = R + se(E, 2.0, 2.125)
 
         h_chain.add_self_energies(L, R, energy=E, tempr=tempr, ef1=ef1, ef2=ef2)
-        grd, grl, gru, gr_left, gnd, gnl, gnu, gn_left = recursive_gf(E,
+        g_trans, grd, grl, gru, gr_left, gnd, gnl, gnu, gn_left = recursive_gf(E,
                                                                       h_chain.h_l,
                                                                       h_chain.h_0,
                                                                       h_chain.h_r,
@@ -440,9 +443,107 @@ def main(spacing, mol_path, nw_path, eps, comm=0):
         for jj in range(num_periods):
             dos[j] = dos[j] + np.real(np.trace(1j * (grd[jj] - grd[jj].H))) / num_periods
             dens[j, jj] = 2 * np.trace(gnd[jj]) / num_periods
-            gamma_l = 1j * (np.matrix(L) - np.matrix(L).H)
-            gamma_r = 1j * (np.matrix(R) - np.matrix(R).H)
-            tr[j] = tr[j] + np.real(np.trace(gamma_l * grd[jj] * gamma_r * grd[jj].H)) / num_periods
+
+        gamma_l = 1j * (np.matrix(L) - np.matrix(L).H)
+        gamma_r = 1j * (np.matrix(R) - np.matrix(R).H)
+        tr[j] = np.real(np.trace(gamma_l * g_trans * gamma_r * g_trans.H))
+
+        print("{} of {}: energy is {}".format(j + 1, energy.shape[0], E))
+
+        if comm:
+            par_data.append({'id': j, 'dos': dos[j], 'tr': tr[j], 'dens': dens[j]})
+
+    if comm:
+        par_data = comm.reduce(par_data, root=0)
+        if rank == 0:
+            ids = [par_data[item]['id'] for item in range(len(par_data))]
+            dos = [x['dos'] for _, x in sorted(zip(ids, par_data))]
+            tr = [x['tr'] for _, x in sorted(zip(ids, par_data))]
+            dens = [x['dens'] for _, x in sorted(zip(ids, par_data))]
+            dos = np.array(dos)
+            tr = np.array(tr)
+            dens = np.array(dens)
+
+            # np.save('dos.npy', dos)
+
+    return dos, tr, dens
+
+
+def main1(nw_path, fields_config, comm=0):
+
+    if comm:
+        rank = comm.Get_rank()
+        size = comm.Get_size()
+    else:
+        rank = 0
+        size = 1
+
+    params = yaml_parser(fields_config)
+
+    # ---------------------------------------------------------------------------------
+    # ----------------------- compute tight-binding matrices --------------------------
+    # ---------------------------------------------------------------------------------
+
+    h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file=nw_path)
+
+    energy = np.linspace(2.1, 2.15, 50)
+    energy = energy[20:30]
+
+    # ---------------------------------------------------------------------------------
+    # ------- pre-compute/pre-load self-energies for the leads from the disk ----------
+    # ---------------------------------------------------------------------------------
+
+    # sgf_l, sgf_r = compute_self_energies_for_leads(energy, h_l, h_0, h_r, save='./SiNW/SiNW2/')
+    # sgf_l = np.load('sgf_l.npy')
+    # sgf_r = np.load('sgf_r.npy')
+
+    # ---------------------------------------------------------------------------------
+    # ---------------------------- make a chain Hamiltonian ---------------------------
+    # ---------------------------------------------------------------------------------
+
+    h_chain = HamiltonianChainComposer(h_l, h_0, h_r, coords, params)
+    # h_chain.visualize()
+
+    # ---------------------------------------------------------------------------------
+    # -------------------- compute Green's functions of the system --------------------
+    # ---------------------------------------------------------------------------------
+
+    num_periods = params['left_translations'] + params['right_translations'] + 1
+
+    dos = np.zeros((energy.shape[0]))
+    tr = np.zeros((energy.shape[0]))
+    dens = np.zeros((energy.shape[0], num_periods))
+
+    par_data = []
+
+    ef1 = 2.1
+    ef2 = 2.1
+    tempr = 100
+
+    for j, E in enumerate(energy):
+        if j % size != rank:
+            continue
+
+        L, R = tb.surface_greens_function(E, h_l, h_0, h_r, iterate=5)
+
+        L = L + se(E, 2.0, 2.125)
+        R = R + se(E, 2.0, 2.125)
+
+        h_chain.add_self_energies(L, R, energy=E, tempr=tempr, ef1=ef1, ef2=ef2)
+        g_trans, grd, grl, gru, gr_left, gnd, gnl, gnu, gn_left = recursive_gf(E,
+                                                                               h_chain.h_l,
+                                                                               h_chain.h_0,
+                                                                               h_chain.h_r,
+                                                                               s_in=h_chain.sgf)
+        h_chain.remove_self_energies()
+
+        for jj in range(num_periods):
+            dos[j] = dos[j] + np.real(np.trace(1j * (grd[jj] - grd[jj].H))) / num_periods
+            dens[j, jj] = 2 * np.trace(gnd[jj]) / num_periods
+
+        gamma_l = 1j * (np.matrix(L) - np.matrix(L).H)
+        gamma_r = 1j * (np.matrix(R) - np.matrix(R).H)
+        tr[j] = np.real(np.trace(gamma_l * g_trans * gamma_r * g_trans.H))
 
         print("{} of {}: energy is {}".format(j + 1, energy.shape[0], E))
 
@@ -467,7 +568,31 @@ def main(spacing, mol_path, nw_path, eps, comm=0):
 
 if __name__ == '__main__':
 
-    main(spacing=1.0,
-         mol_path='/home/mk/tetracene_dft_wB_pcm_38_32_anion.cube',
-         nw_path='./SiNW/SiNW2/',
-         eps=3.8)
+    # main(spacing=1.0,
+    #      mol_path='/home/mk/tetracene_dft_wB_pcm_38_32_cation.cube',
+    #      nw_path='./SiNW/SiNW2/',
+    #      eps=3.8)
+
+    fields_config = """
+
+    unit_cell:        [[0, 0, 5.50]]
+
+    left_translations:     3
+    right_translations:    3
+
+    fields:
+
+        eps:          3.8
+
+        cation:      "/home/mk/tetracene_dft_wB_pcm_38_32_cation.cube"
+        anion:       "/home/mk/tetracene_dft_wB_pcm_38_32_anion.cube"
+
+        angle:       1.13446
+        spacing:     1.0
+
+        xyz:
+            - cation:       [0.0000000000,    0.0000000000,    0.0000000000]
+            - anion:        [1.3750000000,    1.3750000000,    1.3750000000]
+        """
+
+    main1(nw_path='./SiNW/SiNW2/', fields_config=fields_config)
