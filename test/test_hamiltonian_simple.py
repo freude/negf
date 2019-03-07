@@ -19,7 +19,7 @@ def compute_self_energies_for_leads(energy, h_l, h_0, h_r, save=True):
     num_sites = h_0.shape[0]
 
     for j, E in enumerate(energy):
-        L, R = tb.surface_greens_function(E, h_l, h_0, h_r, iterate=5)
+        L, R = tb.surface_greens_function(E, h_l, h_0, h_r, iterate=3)
 
         test_gf = E * np.identity(num_sites) - h_0 - L - R
         metrics = np.linalg.cond(test_gf)
@@ -66,8 +66,8 @@ field.set_origin(np.array([0.0, 5.0, 0.0]))
 h = HamiltonianChain(h_l, h_0, h_r, coords)
 
 period = np.array([0.0, 0.0, 0.5])
-h.translate(period, 3, 3)
-# h.add_field(field, eps=1)
+h.translate(period, 20, 20)
+h.add_field(field, eps=1)
 
 plt.imshow(h.get_matrix())
 plt.show()
@@ -103,33 +103,6 @@ for j, E in enumerate(energy):
     gamma_r = 1j * (np.matrix(sgf_l[j, :, :]) - np.matrix(sgf_l[j, :, :]).H)
     tr[j] = np.real(np.trace(gamma_l * g_trans * gamma_r * g_trans.H))
 
-# zeros = np.zeros(h_0.shape)
-#
-# for j, E in enumerate(energy):
-#     sgf_l_loc = np.block([[sgf_r[j, :, :], zeros, zeros, zeros, zeros],
-#                           [zeros, zeros, zeros, zeros, zeros],
-#                           [zeros, zeros, zeros, zeros, zeros],
-#                           [zeros, zeros, zeros, zeros, zeros],
-#                           [zeros, zeros, zeros, zeros, zeros]])
-#
-#     sgf_r_loc = np.block([[zeros, zeros, zeros, zeros, zeros],
-#                           [zeros, zeros, zeros, zeros, zeros],
-#                           [zeros, zeros, zeros, zeros, zeros],
-#                           [zeros, zeros, zeros, zeros, zeros],
-#                           [zeros, zeros, zeros, zeros, sgf_l[j, :, :]]])
-#
-#     gf = E * np.identity(5 * num_sites) - h_d - sgf_l_loc - sgf_r_loc
-#
-#     metrics = np.linalg.cond(gf)
-#     print("{} of {}: energy is {}, metrics is {}".format(j + 1, energy.shape[0], E, metrics))
-#
-#     gf = np.linalg.pinv(gf)
-#
-#     gf0 = np.matrix(gf)
-#     gamma_l = 1j * (np.matrix(sgf_l_loc) - np.matrix(sgf_l_loc).H)
-#     gamma_r = 1j * (np.matrix(sgf_r_loc) - np.matrix(sgf_r_loc).H)
-#     dos[j] = np.real(np.trace(1j * (gf0 - gf0.H)))
-#     tr[j] = np.real(np.trace(gamma_l * gf0 * gamma_r * gf0.H))
 
 ax = plt.axes()
 ax.set_xlabel('Energy (eV)')
