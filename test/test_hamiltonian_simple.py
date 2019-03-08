@@ -31,9 +31,6 @@ def compute_self_energies_for_leads(energy, h_l, h_0, h_r, save=True):
 
         sgf_l.append(L)
         sgf_r.append(R)
-        # factor.append(phase)
-        # factor1.append(phase1)
-        # factor2.append(phase2)
 
     sgf_l = np.array(sgf_l)
     sgf_r = np.array(sgf_r)

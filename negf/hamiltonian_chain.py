@@ -92,7 +92,7 @@ class HamiltonianChain(object):
                 for jjj in range(len(self.h_0)):
                     self.h_0[jjj] = self.h_0[jjj] - np.diag(item[jjj])
 
-        self.field = None
+        self.fields = None
 
     def add_self_energies(self, sgf_l, sgf_r, energy=0, tempr=0, ef1=0, ef2=0):
 
@@ -148,6 +148,31 @@ class HamiltonianChain(object):
 
         return matrix
 
+    def visualize(self):
+
+        import matplotlib.pyplot as plt
+        from matplotlib import cm
+
+        vals = np.zeros(len(self.fields[0])*len(self.fields[0][0]))
+
+        for field in self.fields:
+            vals += np.hstack(tuple([item for item in field]))
+
+        vals /= np.max(vals)
+
+        from mpl_toolkits.mplot3d import Axes3D
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        norm = cm.colors.Normalize(vmax=np.abs(np.max(vals)), vmin=-np.abs(np.min(vals)))
+
+        ax.scatter(self.coords[:, 0], self.coords[:, 1], self.coords[:, 2],
+                   c=vals,
+                   marker='o',
+                   norm=norm,
+                   cmap=cm.get_cmap(cm.coolwarm))
+
+        plt.show()
+
 
 class HamiltonianChainComposer(HamiltonianChain):
 
@@ -167,7 +192,7 @@ class HamiltonianChainComposer(HamiltonianChain):
                 field = list(item.keys())[0]
 
                 if field in dict_of_fields:
-                    dict_of_fields[field].set_origin(dict_of_fields[field].mean_coords + np.array(item['field']))
+                    dict_of_fields[field].set_origin(dict_of_fields[field].mean_coords + np.array(item[field]))
                 else:
                     dict_of_fields[field] = Field(path=params['fields'][field])
                     # angle = 1.13446
@@ -192,41 +217,7 @@ class HamiltonianChainComposer(HamiltonianChain):
 
                     dict_of_fields[field].set_origin(dict_of_fields[field].mean_coords + np.array(item[field]))
 
-                # self.add_field(dict_of_fields[field], eps=params['fields']['eps'])
-
-    def visualize(self):
-
-        import matplotlib.pyplot as plt
-        from matplotlib import cm
-        from scipy.interpolate import RegularGridInterpolator
-
-        vals = np.hstack(tuple([np.diag(item) for item in self.fields]))
-
-        self.remove_field()
-
-        vals1 = np.hstack(tuple([np.diag(item) for item in self.h_0]))
-
-        from mpl_toolkits.mplot3d import Axes3D
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-
-        norm = cm.colors.Normalize(vmax=np.abs(np.max((vals-vals1))), vmin=-np.abs(np.min((vals-vals1))))
-
-        ax.scatter(self.coords[:, 0], self.coords[:, 1], self.coords[:, 2],
-                   c=vals-vals1, marker='o', norm=norm, cmap=cm.get_cmap(cm.coolwarm))
-        print('hi')
-        # interpolant = RegularGridInterpolator(self.coords_entire, vals, bounds_error=False)
-        #
-        # x = np.linspace(-14, 26, 100)
-        # y = np.linspace(-3, 30, 100)
-        # z = np.linspace(-20, 20, 100)
-        #
-        # X = np.meshgrid(x, y, z, indexing='ij')
-        # values = interpolant(np.vstack((X[0].flatten(),
-        #                                 X[1].flatten(),
-        #                                 X[2].flatten())).T).reshape(X[0].shape)
-        #
-        # plt.imshow(values)
+                self.add_field(dict_of_fields[field], eps=params['fields']['eps'])
 
 
 if __name__ == '__main__':
@@ -243,15 +234,14 @@ if __name__ == '__main__':
         eps = 3.8
     
         cation:      '/home/mk/tetracene_dft_wB_pcm_38_32_cation.cube'
-        anion:       '/home/mk/tetracene_dft_wB_pcm_38_32_cation.cube'
         
         angle:       1.13446
-        spacing:     1.0
+        spacing:     5.0
         
         xyz:
             - cation:       [0.0000000000,    0.0000000000,    0.0000000000]
-            - anion:        [1.3750000000,    1.3750000000,    1.3750000000] 
-        """
+
+    """
 
     params = yaml_parser(fields_config)
     print('hi')

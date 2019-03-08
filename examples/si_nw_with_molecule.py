@@ -339,13 +339,10 @@ def main(spacing, mol_path, nw_path, eps, comm=0):
         size = 1
 
     # ---------------------------------------------------------------------------------
-    # ----------------------- compute tight-binding matrices --------------------------
+    # ----------- compute tight-binding matrices and define energy scale --------------
     # ---------------------------------------------------------------------------------
 
     h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file=nw_path)
-    # h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file='/home/mk/TB_project/tb/third_party/SiNW6.xyz')
-    # h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file='/home/mk/TB_project/tb/third_party/SiNW7.xyz')
-
     energy = np.linspace(2.1, 2.15, 50)
     energy = energy[15:30]
 
@@ -371,14 +368,9 @@ def main(spacing, mol_path, nw_path, eps, comm=0):
     # ---------------------------------------------------------------------------------
 
     field = Field(path=mol_path)
-    # field.rotate('z',  1.13446)
-    # field.rotate('z',  np.pi / 2.0)
-    # field.rotate('x',  np.pi / 2.0)
-    # field.rotate('y',  0.436332)     # 25 degrees
 
-    angle = 1.13446
-
-    field.rotate('x', angle)  # 65 degrees
+    angle = 1.13446                    # 65 degrees
+    field.rotate('x', angle)
     field.rotate('y', np.pi / 2.0)
 
     # field.set_origin(np.array([6.36, 11.86, 2.75]))
@@ -404,7 +396,8 @@ def main(spacing, mol_path, nw_path, eps, comm=0):
     # ------------------- add field to the Hamiltonian and visualize ------------------
     # ---------------------------------------------------------------------------------
 
-    # h_chain.add_field(field, eps=eps)
+    h_chain.add_field(field, eps=eps)
+    h_chain.visualize()
     # visualize1(h_chain, field, size_x_min, size_y_min, size_z_min)
 
     # ---------------------------------------------------------------------------------
@@ -481,13 +474,12 @@ def main1(nw_path, fields_config, comm=0):
     params = yaml_parser(fields_config)
 
     # ---------------------------------------------------------------------------------
-    # ----------------------- compute tight-binding matrices --------------------------
+    # ------------compute tight-binding matrices and define energy scale --------------
     # ---------------------------------------------------------------------------------
 
     h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file=nw_path)
 
     energy = np.linspace(2.1, 2.15, 50)
-    energy = energy[20:30]
 
     # ---------------------------------------------------------------------------------
     # ------- pre-compute/pre-load self-energies for the leads from the disk ----------
@@ -502,7 +494,7 @@ def main1(nw_path, fields_config, comm=0):
     # ---------------------------------------------------------------------------------
 
     h_chain = HamiltonianChainComposer(h_l, h_0, h_r, coords, params)
-    # h_chain.visualize()
+    h_chain.visualize()
 
     # ---------------------------------------------------------------------------------
     # -------------------- compute Green's functions of the system --------------------
@@ -526,8 +518,8 @@ def main1(nw_path, fields_config, comm=0):
 
         L, R = tb.surface_greens_function(E, h_l, h_0, h_r, iterate=5)
 
-        L = L + se(E, 2.0, 2.125)
-        R = R + se(E, 2.0, 2.125)
+        # L = L + se(E, 2.0, 2.125)
+        # R = R + se(E, 2.0, 2.125)
 
         h_chain.add_self_energies(L, R, energy=E, tempr=tempr, ef1=ef1, ef2=ef2)
         g_trans, grd, grl, gru, gr_left, gnd, gnl, gnu, gn_left = recursive_gf(E,
@@ -551,7 +543,9 @@ def main1(nw_path, fields_config, comm=0):
             par_data.append({'id': j, 'dos': dos[j], 'tr': tr[j], 'dens': dens[j]})
 
     if comm:
+
         par_data = comm.reduce(par_data, root=0)
+
         if rank == 0:
             ids = [par_data[item]['id'] for item in range(len(par_data))]
             dos = [x['dos'] for _, x in sorted(zip(ids, par_data))]
@@ -561,9 +555,18 @@ def main1(nw_path, fields_config, comm=0):
             tr = np.array(tr)
             dens = np.array(dens)
 
-            # np.save('dos.npy', dos)
+            np.save('dos' + params['job_title'] + '.npy', dos)
+            np.save('tr' + params['job_title'] + '.npy', tr)
+            np.save('dens' + params['job_title'] + '.npy', dens)
 
-    return dos, tr, dens
+            return dos, tr, dens
+
+    else:
+        np.save('dos' + params['job_title'] + '.npy', dos)
+        np.save('tr' + params['job_title'] + '.npy', tr)
+        np.save('dens' + params['job_title'] + '.npy', dens)
+
+        return dos, tr, dens
 
 
 if __name__ == '__main__':
@@ -575,6 +578,8 @@ if __name__ == '__main__':
 
     fields_config = """
 
+    job_title:              '1'
+
     unit_cell:        [[0, 0, 5.50]]
 
     left_translations:     3
@@ -585,14 +590,13 @@ if __name__ == '__main__':
         eps:          3.8
 
         cation:      "/home/mk/tetracene_dft_wB_pcm_38_32_cation.cube"
-        anion:       "/home/mk/tetracene_dft_wB_pcm_38_32_anion.cube"
 
         angle:       1.13446
-        spacing:     1.0
+        spacing:     3.0
 
         xyz:
-            - cation:       [0.0000000000,    0.0000000000,    0.0000000000]
-            - anion:        [1.3750000000,    1.3750000000,    1.3750000000]
+            - cation:       [-5.0000000000,    0.0000000000,    -5.0000000000]
+            - cation:       [5.0000000000,    0.0000000000,    5.0000000000]
         """
 
     main1(nw_path='./SiNW/SiNW2/', fields_config=fields_config)
