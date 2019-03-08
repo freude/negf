@@ -1,5 +1,5 @@
 from mpi4py import MPI
-from negf.examples.si_nw_with_molecule import *
+from examples.si_nw_with_molecule import *
 
 
 if __name__ == '__main__':
