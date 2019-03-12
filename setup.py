@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 setup(name='negf',
@@ -7,6 +7,6 @@ setup(name='negf',
       author='Mike Klymenko',
       author_email='mike.klymenko@rmit.edu.au',
       license='MIT',
-      packages=['negf'],
+      packages=find_packages(),
       zip_safe=False
       )
