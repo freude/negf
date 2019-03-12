@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.npy
 
 # OS generated files #
 .DS_Store
@@ -116,3 +117,11 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+#MATLAB
+*.mat
+
+#data
+*.cube
+*.xyz
+/third_party
