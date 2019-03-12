@@ -462,7 +462,7 @@ def main(spacing, mol_path, nw_path, eps, comm=0):
     return dos, tr, dens
 
 
-def main1(nw_path, fields_config, comm=0):
+def main1(job_title, nw_path, fields_config, negf_config, comm=0):
 
     if comm:
         rank = comm.Get_rank()
@@ -472,6 +472,7 @@ def main1(nw_path, fields_config, comm=0):
         size = 1
 
     params = yaml_parser(fields_config)
+    negf_params = yaml_parser(negf_config)
 
     # ---------------------------------------------------------------------------------
     # ------------compute tight-binding matrices and define energy scale --------------
@@ -479,7 +480,10 @@ def main1(nw_path, fields_config, comm=0):
 
     h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file=nw_path)
 
-    energy = np.linspace(2.1, 2.15, 50)
+    energy = np.linspace(negf_params['energy']['start'],
+                         negf_params['energy']['end'],
+                         negf_params['energy']['steps'])
+
     energy = energy[15:29]
 
     # ---------------------------------------------------------------------------------
@@ -510,9 +514,9 @@ def main1(nw_path, fields_config, comm=0):
 
     par_data = []
 
-    ef1 = 2.1
-    ef2 = 2.1
-    tempr = 100
+    ef1 = negf_params['ef1']
+    ef2 = negf_params['ef2']
+    tempr = negf_params['tempr']
 
     for j, E in enumerate(energy):
         if j % size != rank:
@@ -562,9 +566,9 @@ def main1(nw_path, fields_config, comm=0):
             tr = np.array(tr)
             dens = np.array(dens)
 
-            np.save('dos' + params['job_title'] + '.npy', dos)
-            np.save('tr' + params['job_title'] + '.npy', tr)
-            np.save('dens' + params['job_title'] + '.npy', dens)
+            np.save('dos' + job_title + '.npy', dos)
+            np.save('tr' + job_title + '.npy', tr)
+            np.save('dens' + job_title + '.npy', dens)
 
             return dos, tr, dens
 
@@ -577,9 +581,9 @@ def main1(nw_path, fields_config, comm=0):
         # for j in range(1, dens.shape[0]):
         #     dens[j, :] = np.convolve(dens[j, :], np.ones((3,)) / 3, mode='valid')
 
-        np.save('dos' + params['job_title'] + '.npy', dos)
-        np.save('tr' + params['job_title'] + '.npy', tr)
-        np.save('dens' + params['job_title'] + '.npy', dens)
+        np.save('dos' + job_title + '.npy', dos)
+        np.save('tr' + job_title + '.npy', tr)
+        np.save('dens' + job_title + '.npy', dens)
 
         return dos, tr, dens
 
@@ -592,8 +596,6 @@ if __name__ == '__main__':
     #      eps=3.8)
 
     fields_config = """
-
-    job_title:              '1'
 
     unit_cell:        [[0, 0, 5.50]]
 
@@ -612,6 +614,17 @@ if __name__ == '__main__':
         xyz:
             - cation:       [-5.0000000000,    0.0000000000,    -5.0000000000]
             - cation:       [5.0000000000,    0.0000000000,    5.0000000000]
-        """
+    """
 
-    main1(nw_path='./SiNW/SiNW2/', fields_config=fields_config)
+    negf_config = """
+    ef1:        2.1
+    ef2:        2.1
+    tempr:      100
+    energy:
+        start:  2.1
+        end:    2.15
+        steps:  50
+
+    """
+
+    main1("1", nw_path='./SiNW/SiNW2/', fields_config=fields_config, negf_config=negf_config)
