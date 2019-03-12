@@ -480,6 +480,7 @@ def main1(nw_path, fields_config, comm=0):
     h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file=nw_path)
 
     energy = np.linspace(2.1, 2.15, 50)
+    energy = energy[15:29]
 
     # ---------------------------------------------------------------------------------
     # ------- pre-compute/pre-load self-energies for the leads from the disk ----------
@@ -504,6 +505,7 @@ def main1(nw_path, fields_config, comm=0):
 
     dos = np.zeros((energy.shape[0]))
     tr = np.zeros((energy.shape[0]))
+    # dens = np.zeros((energy.shape[0], len(h_chain.z_coords())))
     dens = np.zeros((energy.shape[0], num_periods))
 
     par_data = []
@@ -531,7 +533,12 @@ def main1(nw_path, fields_config, comm=0):
 
         for jj in range(num_periods):
             dos[j] = dos[j] + np.real(np.trace(1j * (grd[jj] - grd[jj].H))) / num_periods
-            dens[j, jj] = 2 * np.trace(gnd[jj]) / num_periods
+            dens[j, jj] = dens[j, jj] + 2 * np.trace(gnd[jj])
+
+            # for jj1 in range(gnd[jj].shape[0]):
+            #
+            #     dens[j, h_chain.z_coords_map(jj * gnd[jj].shape[0] + jj1)] = \
+            #         dens[j, h_chain.z_coords_map(jj * gnd[jj].shape[0] + jj1)] + 2 * gnd[jj][jj1, jj1]
 
         gamma_l = 1j * (np.matrix(L) - np.matrix(L).H)
         gamma_r = 1j * (np.matrix(R) - np.matrix(R).H)
@@ -540,7 +547,7 @@ def main1(nw_path, fields_config, comm=0):
         print("{} of {}: energy is {}".format(j + 1, energy.shape[0], E))
 
         if comm:
-            par_data.append({'id': j, 'dos': dos[j], 'tr': tr[j], 'dens': dens[j]})
+            par_data.append({'id': j, 'dos': dos[j], 'tr': tr[j], 'dens': dens[j, :]})
 
     if comm:
 
@@ -562,6 +569,14 @@ def main1(nw_path, fields_config, comm=0):
             return dos, tr, dens
 
     else:
+
+        # for j in range(1, dens.shape[1]):
+        #     if np.sum(dens[:, j]) < 0.5:
+        #         dens[:, j] = dens[:, j-1]
+
+        # for j in range(1, dens.shape[0]):
+        #     dens[j, :] = np.convolve(dens[j, :], np.ones((3,)) / 3, mode='valid')
+
         np.save('dos' + params['job_title'] + '.npy', dos)
         np.save('tr' + params['job_title'] + '.npy', tr)
         np.save('dens' + params['job_title'] + '.npy', dens)

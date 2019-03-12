@@ -17,6 +17,7 @@ class HamiltonianChain(object):
         self.h_0 = h_0
         self.h_r = h_r
         self._coords = coords
+        self._z_coords_map = []
 
         self.num_sites = h_0.shape[0]
 
@@ -131,6 +132,27 @@ class HamiltonianChain(object):
             return np.concatenate(coords)
         else:
             return self._coords
+
+    def z_coords_map(self, ind):
+
+        if len(self._z_coords_map) == 0:
+
+            coords = self.coords[:, 2]
+            unique_coords = self.z_coords()
+            coord_map = np.zeros(coords.shape)
+
+            for j, item in enumerate(unique_coords):
+                coord_map[np.abs(coords-item) < 0.001] = j
+
+            self._z_coords_map = coord_map
+
+        return int(self._z_coords_map[ind])
+
+    def z_coords(self):
+
+        unique_coords = np.sort(np.array(list(set(self.coords[:, 2]))))
+
+        return unique_coords
 
     def get_matrix(self):
 
