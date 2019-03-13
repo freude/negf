@@ -484,7 +484,7 @@ def main1(job_title, nw_path, fields_config, negf_config, comm=0):
                          negf_params['energy']['end'],
                          negf_params['energy']['steps'])
 
-    energy = energy[15:29]
+    # energy = energy[15:29]
 
     # ---------------------------------------------------------------------------------
     # ------- pre-compute/pre-load self-energies for the leads from the disk ----------
