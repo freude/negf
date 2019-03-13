@@ -499,7 +499,7 @@ def main1(job_title, nw_path, fields_config, negf_config, comm=0):
     # ---------------------------------------------------------------------------------
 
     h_chain = HamiltonianChainComposer(h_l, h_0, h_r, coords, params)
-    h_chain.visualize()
+    # h_chain.visualize()
 
     # ---------------------------------------------------------------------------------
     # -------------------- compute Green's functions of the system --------------------
@@ -609,12 +609,12 @@ if __name__ == '__main__':
         cation:      "/home/mk/tetracene_dft_wB_pcm_38_32_cation.cube"
 
         angle:       1.13446
-        spacing:     3.0
+        spacing:     {}
 
         xyz:
             - cation:       [-5.0000000000,    0.0000000000,    -5.0000000000]
             - cation:       [5.0000000000,    0.0000000000,    5.0000000000]
-    """
+    """.format(3.0)
 
     negf_config = """
     ef1:        2.1

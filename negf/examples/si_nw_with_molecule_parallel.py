@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
         eps:          3.8
 
-        cation:      "/home/mk/tetracene_dft_wB_pcm_38_32_cation.cube"
+        cation:      "tetracene_dft_wB_pcm_38_32_cation.cube"
 
         angle:       1.13446
         spacing:     3.0
