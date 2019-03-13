@@ -16,8 +16,6 @@ if __name__ == '__main__':
 
     fields_config = """
 
-    job_title:              '1'
-
     unit_cell:        [[0, 0, 5.50]]
 
     left_translations:     3
@@ -35,6 +33,17 @@ if __name__ == '__main__':
         xyz:
             - cation:       [-5.0000000000,    0.0000000000,    -5.0000000000]
             - cation:       [5.0000000000,    0.0000000000,    5.0000000000]
-        """
+    """
 
-    main1(nw_path='./SiNW/SiNW2/', fields_config=fields_config, comm=comm)
+    negf_config = """
+    ef1:        2.1
+    ef2:        2.1
+    tempr:      100
+    energy:
+        start:  2.1
+        end:    2.15
+        steps:  50
+
+    """
+
+    main1("1", nw_path='./SiNW/SiNW2/', fields_config=fields_config, negf_config=negf_config, comm=comm)
