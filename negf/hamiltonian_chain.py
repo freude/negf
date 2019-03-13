@@ -84,7 +84,7 @@ class HamiltonianChain(object):
         self.fields.append(field_buf)
 
         for jjj in range(len(self.h_0)):
-            self.h_0[jjj] = self.h_0[jjj] + np.diag(field_buf[jjj])
+            self.h_0[jjj] = self.h_0[jjj] - np.diag(field_buf[jjj])
 
     def remove_field(self):
 
