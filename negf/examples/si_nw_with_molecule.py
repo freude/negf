@@ -28,7 +28,7 @@ def se(energy, e1, e2):
     if e1 < energy < e2:
         ans = -0.01j
 
-    ans = -0.007j
+    ans = -0.01j
 
     return ans
 
