@@ -422,8 +422,8 @@ def main(spacing, mol_path, nw_path, eps, comm=0):
 
         L, R = tb.surface_greens_function(E, h_l, h_0, h_r, iterate=5)
 
-        # L = L + se(E, 2.0, 2.125)
-        # R = R + se(E, 2.0, 2.125)
+        L = L + se(E, 2.0, 2.125)
+        R = R + se(E, 2.0, 2.125)
 
         h_chain.add_self_energies(L, R, energy=E, tempr=tempr, ef1=ef1, ef2=ef2)
         g_trans, grd, grl, gru, gr_left, gnd, gnl, gnu, gn_left = recursive_gf(E,
