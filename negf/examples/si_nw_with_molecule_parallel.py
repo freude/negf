@@ -14,28 +14,10 @@ if __name__ == '__main__':
     #      eps=3.8,
     #      comm=comm)
 
-    fields_config = """
-
-    unit_cell:        [[0, 0, 5.50]]
-
-    left_translations:     3
-    right_translations:    3
-
-    fields:
-
-        eps:          3.8
-
-        cation:      "tetracene_dft_wB_pcm_38_32_cation.cube"
-
-        angle:       1.13446
-        spacing:     3.0
-
-        xyz:
-            - cation:       [-5.0000000000,    0.0000000000,    -5.0000000000]
-            - cation:       [5.0000000000,    0.0000000000,    5.0000000000]
-    """
-
     negf_config = """
+    
+    dephasing:  -0.01
+    
     ef1:        2.1
     ef2:        2.1
     tempr:      100
@@ -46,4 +28,33 @@ if __name__ == '__main__':
 
     """
 
-    main1("1", nw_path='./SiNW/SiNW2/', fields_config=fields_config, negf_config=negf_config, comm=comm)
+    spacings = [1.0, 2.0, 3.0]
+
+    for spacing in spacings:
+
+        fields_config = """
+
+        unit_cell:        [[0, 0, 5.50]]
+
+        left_translations:     3
+        right_translations:    3
+
+        fields:
+
+            eps:          3.8
+
+            cation:      "tetracene_dft_wB_pcm_38_32_cation.cube"
+
+            angle:       1.13446
+            spacing:     {}
+
+            xyz:
+                - cation:       [0.0,    0.0,    0.0]
+                
+        """.format(spacing)
+
+        main1(str(int(spacing)),
+              nw_path='./SiNW/SiNW2/',
+              fields_config=fields_config,
+              negf_config=negf_config,
+              comm=comm)
