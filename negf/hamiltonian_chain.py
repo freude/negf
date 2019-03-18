@@ -244,26 +244,46 @@ class HamiltonianChainComposer(HamiltonianChain):
 
 if __name__ == '__main__':
 
-    fields_config = """
-    
-    unit_cell:        [[0, 0, 5.50]]
-    
-    left_translations:     3
-    right_translations:    3
-    
-    fields:
-    
-        eps = 3.8
-    
-        cation:      '/home/mk/tetracene_dft_wB_pcm_38_32_cation.cube'
-        
-        angle:       1.13446
-        spacing:     5.0
-        
-        xyz:
-            - cation:       [0.0000000000,    0.0000000000,    0.0000000000]
+    # fields_config = """
+    #
+    # unit_cell:        [[0, 0, 5.50]]
+    #
+    # left_translations:     3
+    # right_translations:    3
+    #
+    # fields:
+    #
+    #     eps = 3.8
+    #
+    #     cation:      '/home/mk/tetracene_dft_wB_pcm_38_32_cation.cube'
+    #
+    #     angle:       1.13446
+    #     spacing:     5.0
+    #
+    #     xyz:
+    #         - cation:       [0.0000000000,    0.0000000000,    0.0000000000]
+    #
+    # """
+    #
+    # params = yaml_parser(fields_config)
+    # print('hi')
+    import numpy as np
+    from matplotlib import pyplot
 
-    """
+    fig = pyplot.figure()
+    ax = fig.add_axes((0.1, 0.1, 0.8, 0.8), autoscale_on=False)
 
-    params = yaml_parser(fields_config)
-    print('hi')
+    # Empty data plot
+    points = ax.scatter([], [], color='r', zorder=2)
+    # ax properties
+    ax.set_xlim(-10, 10)
+    ax.set_ylim(5e-2, 5e3)
+    ax.set_yscale("log")
+
+    # Example data points
+    x_data = [-5, -3, 0, 3, 5]
+    y_data = [1, 10, 1000, 10, 1]
+    # Set data points
+    points.set_offsets(np.hstack((x_data, y_data)).T)
+
+    pyplot.show()

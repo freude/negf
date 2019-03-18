@@ -13,7 +13,7 @@ from negf.aux_functions import yaml_parser
 save_to = './SiNW/'
 
 
-def se(energy, e1, e2):
+def se(energy, e1, e2, deph):
     """
     Simplest self-energy defined as a non-zero complex number in a range of energies (e1, e2)
 
@@ -26,9 +26,9 @@ def se(energy, e1, e2):
     ans = 0
 
     if e1 < energy < e2:
-        ans = -0.01j
+        ans = deph * 1j
 
-    ans = -0.01j
+    ans = deph * 1j
 
     return ans
 
@@ -524,8 +524,8 @@ def main1(job_title, nw_path, fields_config, negf_config, comm=0):
 
         L, R = tb.surface_greens_function(E, h_l, h_0, h_r, iterate=5)
 
-        # L = L + se(E, 2.0, 2.125)
-        # R = R + se(E, 2.0, 2.125)
+        L = L + se(E, 2.0, 2.125, negf_params['dephasing'])
+        R = R + se(E, 2.0, 2.125, negf_params['dephasing'])
 
         h_chain.add_self_energies(L, R, energy=E, tempr=tempr, ef1=ef1, ef2=ef2)
         g_trans, grd, grl, gru, gr_left, gnd, gnl, gnu, gn_left = recursive_gf(E,
@@ -617,9 +617,13 @@ if __name__ == '__main__':
     """.format(3.0)
 
     negf_config = """
+    
+    dephasing:  -0.01
+    
     ef1:        2.1
     ef2:        2.1
     tempr:      100
+    
     energy:
         start:  2.1
         end:    2.15
