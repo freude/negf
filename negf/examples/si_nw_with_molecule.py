@@ -462,7 +462,35 @@ def main(spacing, mol_path, nw_path, eps, comm=0):
     return dos, tr, dens
 
 
-def main1(job_title, nw_path, fields_config, negf_config, comm=0):
+def make_basis(nw_path, energy=np.linspace(2.1, 2.6, 20)):
+
+    import matplotlib.pyplot as plt
+
+    # ---------------------------------------------------------------------------------
+    # ------------compute tight-binding matrices and define energy scale --------------
+    # ---------------------------------------------------------------------------------
+
+    h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file=nw_path)
+    h_ls, h_0s, h_rs, vals_for_plot, new_basis = tb.reduce_mode_space(energy, h_l, h_0, h_r, 0.1, input_file=nw_path)
+
+    plt.plot(energy, vals_for_plot, 'o', fillstyle='none')
+    # orthogonalize initial basis
+
+    vals = []
+    vecs = []
+    vals_for_plot1 = []
+
+    energy1 = np.linspace(2.1, 2.9, 200)
+    _, vals_for_plot1, _ = tb.bs_vs_e(energy1, h_ls, h_0s, h_rs)
+
+    label = '_' + "{0:.2f}".format(np.min(energy)) + '_' + "{0:.2f}".format(np.max(energy)) + '_' + str(len(energy))
+    filename = os.path.join(nw_path, 'bs_' + label + '.pdf')
+
+    plt.plot(energy1, vals_for_plot1, '.')
+    plt.savefig(filename)
+
+
+def main1(job_title, nw_path, fields_config, negf_config, comm=0, reduced_modes=False):
 
     if comm:
         rank = comm.Get_rank()
@@ -484,7 +512,19 @@ def main1(job_title, nw_path, fields_config, negf_config, comm=0):
                          negf_params['energy']['end'],
                          negf_params['energy']['steps'])
 
-    # energy = energy[15:29]
+    if reduced_modes:
+        ref_energy = np.linspace(negf_params['basis'][0],
+                                 negf_params['basis'][1],
+                                 negf_params['basis'][2])
+        h_ls, h_0s, h_rs, _, new_basis = tb.reduce_mode_space(ref_energy,
+                                                              h_l, h_0, h_r,
+                                                              0.1,
+                                                              input_file=nw_path)
+    else:
+        h_ls = h_l
+        h_0s = h_0
+        h_rs = h_r
+        new_basis = []
 
     # ---------------------------------------------------------------------------------
     # ------- pre-compute/pre-load self-energies for the leads from the disk ----------
@@ -502,6 +542,16 @@ def main1(job_title, nw_path, fields_config, negf_config, comm=0):
 
     h_chain = HamiltonianChainComposer(h_l, h_0, h_r, coords, params)
     # h_chain.visualize()
+
+    if len(new_basis) > 0:
+        for j, item in enumerate(h_chain.h_0):
+            h_chain.h_0[j] = new_basis.H * item * new_basis
+
+        for j, item in enumerate(h_chain.h_l):
+            h_chain.h_l[j] = new_basis.H * item * new_basis
+
+        for j, item in enumerate(h_chain.h_r):
+            h_chain.h_r[j] = new_basis.H * item * new_basis
 
     # ---------------------------------------------------------------------------------
     # -------------------- compute Green's functions of the system --------------------
@@ -524,7 +574,7 @@ def main1(job_title, nw_path, fields_config, negf_config, comm=0):
         if j % size != rank:
             continue
 
-        L, R = tb.surface_greens_function(E, h_l, h_0, h_r, iterate=5)
+        L, R = tb.surface_greens_function(E, h_ls, h_0s, h_rs, iterate=5)
 
         # L = L + se(E, 2.0, 2.125, negf_params['dephasing'])
         # R = R + se(E, 2.0, 2.125, negf_params['dephasing'])
@@ -601,8 +651,8 @@ if __name__ == '__main__':
 
     unit_cell:        [[0, 0, 5.50]]
 
-    left_translations:     3
-    right_translations:    3
+    left_translations:     10
+    right_translations:    10
 
     fields:
 
@@ -614,13 +664,13 @@ if __name__ == '__main__':
         spacing:     {}
 
         xyz:
-            - cation:       [-5.0000000000,    0.0000000000,    -5.0000000000]
-            - cation:       [5.0000000000,    0.0000000000,    5.0000000000]
-    """.format(3.0)
+            - cation:       [0.0,    0.0,    0.0]
+
+    """.format(2.0)
 
     negf_config = """
     
-    dephasing:  -0.01
+    dephasing:  -0.0001
     
     ef1:        2.1
     ef2:        2.1
@@ -628,9 +678,12 @@ if __name__ == '__main__':
     
     energy:
         start:  2.1
-        end:    2.15
-        steps:  50
+        end:    2.2
+        steps:  3000
+        
+    basis:   [2.10, 2.60, 20]
 
     """
 
-    main1("1", nw_path='./SiNW/SiNW2/', fields_config=fields_config, negf_config=negf_config)
+    main1("1", nw_path='./SiNW/SiNW2/', fields_config=fields_config, negf_config=negf_config, reduced_modes=True)
+    # make_basis('./SiNW/SiNW2/')
