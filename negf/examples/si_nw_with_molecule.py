@@ -618,9 +618,10 @@ def main1(job_title, nw_path, fields_config, negf_config, comm=0, reduced_modes=
             tr = np.array(tr)
             dens = np.array(dens)
 
-            np.save('dos' + job_title + '.npy', dos)
-            np.save('tr' + job_title + '.npy', tr)
-            np.save('dens' + job_title + '.npy', dens)
+            np.save(os.path.join(nw_path, 'dos' + job_title + '.npy', dos))
+            np.save(os.path.join(nw_path, 'tr' + job_title + '.npy', tr))
+            np.save(os.path.join(nw_path, 'dens' + job_title + '.npy', dens))
+            np.save(os.path.join(nw_path, 'energy.npy', energy))
 
             return dos, tr, dens
 
@@ -633,57 +634,112 @@ def main1(job_title, nw_path, fields_config, negf_config, comm=0, reduced_modes=
         # for j in range(1, dens.shape[0]):
         #     dens[j, :] = np.convolve(dens[j, :], np.ones((3,)) / 3, mode='valid')
 
-        np.save('dos' + job_title + '.npy', dos)
-        np.save('tr' + job_title + '.npy', tr)
-        np.save('dens' + job_title + '.npy', dens)
+        np.save(os.path.join(nw_path, 'dos' + job_title + '.npy', dos))
+        np.save(os.path.join(nw_path, 'tr' + job_title + '.npy', tr))
+        np.save(os.path.join(nw_path, 'dens' + job_title + '.npy', dens))
+        np.save(os.path.join(nw_path, 'energy.npy', energy))
 
         return dos, tr, dens
+
+# if __name__ == '__main__':
+#
+#     # main(spacing=1.0,
+#     #      mol_path='/home/mk/tetracene_dft_wB_pcm_38_32_cation.cube',
+#     #      nw_path='./SiNW/SiNW2/',
+#     #      eps=3.8)
+#
+#     fields_config = """
+#
+#     unit_cell:        [[0, 0, 5.50]]
+#
+#     left_translations:     10
+#     right_translations:    10
+#
+#     fields:
+#
+#         eps:          3.8
+#
+#         cation:      "/home/mk/tetracene_dft_wB_pcm_38_32_cation.cube"
+#
+#         angle:       1.13446
+#         spacing:     {}
+#
+#         xyz:
+#             - cation:       [0.0,    0.0,    0.0]
+#
+#     """.format(2.0)
+#
+#     negf_config = """
+#
+#     dephasing:  -0.0001
+#
+#     ef1:        2.1
+#     ef2:        2.1
+#     tempr:      100
+#
+#     energy:
+#         start:  2.0
+#         end:    2.5
+#         steps:  5000
+#
+#     basis:   [2.10, 2.60, 20]
+#
+#     """
+#
+#     main1("1", nw_path='./SiNW/SiNW2/', fields_config=fields_config, negf_config=negf_config, reduced_modes=True)
+#     # make_basis('./SiNW/SiNW2/')
 
 
 if __name__ == '__main__':
 
     # main(spacing=1.0,
-    #      mol_path='/home/mk/tetracene_dft_wB_pcm_38_32_cation.cube',
+    #      mol_path='/home/mk/tetracene_dft_wB_pcm_38_32_anion.cube',
     #      nw_path='./SiNW/SiNW2/',
-    #      eps=3.8)
-
-    fields_config = """
-
-    unit_cell:        [[0, 0, 5.50]]
-
-    left_translations:     10
-    right_translations:    10
-
-    fields:
-
-        eps:          3.8
-
-        cation:      "/home/mk/tetracene_dft_wB_pcm_38_32_cation.cube"
-
-        angle:       1.13446
-        spacing:     {}
-
-        xyz:
-            - cation:       [0.0,    0.0,    0.0]
-
-    """.format(2.0)
+    #      eps=3.8,
+    #      comm=comm)
 
     negf_config = """
-    
+
     dephasing:  -0.0001
-    
+
     ef1:        2.1
     ef2:        2.1
     tempr:      100
-    
     energy:
-        start:  2.1
-        end:    2.2
+        start:  2.0
+        end:    2.5
         steps:  3000
-        
-    basis:   [2.10, 2.60, 20]
+
+    basis:   [1.70, 2.20, 20]
 
     """
 
-    main1("1", nw_path='./SiNW/SiNW2/', fields_config=fields_config, negf_config=negf_config, reduced_modes=True)
-    # make_basis('./SiNW/SiNW2/')
+    spacings = np.arange(1.0, 28.0)
+
+    for spacing in spacings:
+        fields_config = """
+
+        unit_cell:        [[0, 0, 5.50]]
+
+        left_translations:     10
+        right_translations:    10
+
+        fields:
+
+            eps:          3.8
+
+            cation:      "/home/mk/tetracene_dft_wB_pcm_38_32_cation.cube"
+
+            angle:       1.13446
+            spacing:     {}
+
+            xyz:
+                - cation:       [0.0,    0.0,    0.0]
+
+        """.format(spacing)
+
+        main1(str(int(spacing)),
+              nw_path='./SiNW/SiNW3/',
+              fields_config=fields_config,
+              negf_config=negf_config,
+              reduced_modes=True)
