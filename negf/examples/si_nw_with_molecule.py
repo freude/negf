@@ -618,10 +618,10 @@ def main1(job_title, nw_path, fields_config, negf_config, comm=0, reduced_modes=
             tr = np.array(tr)
             dens = np.array(dens)
 
-            np.save(os.path.join(nw_path, 'dos' + job_title + '.npy', dos))
-            np.save(os.path.join(nw_path, 'tr' + job_title + '.npy', tr))
-            np.save(os.path.join(nw_path, 'dens' + job_title + '.npy', dens))
-            np.save(os.path.join(nw_path, 'energy.npy', energy))
+            np.save(os.path.join(nw_path, 'dos' + job_title + '.npy'), dos)
+            np.save(os.path.join(nw_path, 'tr' + job_title + '.npy'), tr)
+            np.save(os.path.join(nw_path, 'dens' + job_title + '.npy'), dens)
+            np.save(os.path.join(nw_path, 'energy.npy'), energy)
 
             return dos, tr, dens
 
@@ -634,10 +634,10 @@ def main1(job_title, nw_path, fields_config, negf_config, comm=0, reduced_modes=
         # for j in range(1, dens.shape[0]):
         #     dens[j, :] = np.convolve(dens[j, :], np.ones((3,)) / 3, mode='valid')
 
-        np.save(os.path.join(nw_path, 'dos' + job_title + '.npy', dos))
-        np.save(os.path.join(nw_path, 'tr' + job_title + '.npy', tr))
-        np.save(os.path.join(nw_path, 'dens' + job_title + '.npy', dens))
-        np.save(os.path.join(nw_path, 'energy.npy', energy))
+        np.save(os.path.join(nw_path, 'dos' + job_title + '.npy'), dos)
+        np.save(os.path.join(nw_path, 'tr' + job_title + '.npy'), tr)
+        np.save(os.path.join(nw_path, 'dens' + job_title + '.npy'), dens)
+        np.save(os.path.join(nw_path, 'energy.npy'), energy)
 
         return dos, tr, dens
 
@@ -710,7 +710,7 @@ if __name__ == '__main__':
         end:    2.5
         steps:  3000
 
-    basis:   [1.70, 2.20, 20]
+    basis:   [2.10, 2.60, 20]
 
     """
 
@@ -739,7 +739,7 @@ if __name__ == '__main__':
         """.format(spacing)
 
         main1(str(int(spacing)),
-              nw_path='./SiNW/SiNW3/',
+              nw_path='./SiNW/SiNW2/',
               fields_config=fields_config,
               negf_config=negf_config,
               reduced_modes=True)
