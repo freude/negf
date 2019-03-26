@@ -462,33 +462,27 @@ def main(spacing, mol_path, nw_path, eps, comm=0):
     return dos, tr, dens
 
 
-def make_basis(nw_path, energy=np.linspace(2.1, 2.6, 20)):
+def make_basis(nw_path, energy=np.linspace(2.1, 2.6, 20), save=True, show=False):
 
     import matplotlib.pyplot as plt
-
-    # ---------------------------------------------------------------------------------
-    # ------------compute tight-binding matrices and define energy scale --------------
-    # ---------------------------------------------------------------------------------
 
     h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file=nw_path)
     h_ls, h_0s, h_rs, vals_for_plot, new_basis = tb.reduce_mode_space(energy, h_l, h_0, h_r, 0.1, input_file=nw_path)
 
     plt.plot(energy, vals_for_plot, 'o', fillstyle='none')
-    # orthogonalize initial basis
 
-    vals = []
-    vecs = []
-    vals_for_plot1 = []
-
-    energy1 = np.linspace(2.1, 2.9, 200)
+    energy1 = np.linspace(np.min(energy), np.max(energy), 500)
     _, vals_for_plot1, _ = tb.bs_vs_e(energy1, h_ls, h_0s, h_rs)
 
     label = '_' + "{0:.2f}".format(np.min(energy)) + '_' + "{0:.2f}".format(np.max(energy)) + '_' + str(len(energy))
     filename = os.path.join(nw_path, 'bs_' + label + '.pdf')
 
-    plt.plot(energy1, vals_for_plot1, '.')
-    plt.savefig(filename)
-
+    if save or show:
+        plt.plot(energy1, vals_for_plot1, '.')
+        if save:
+            plt.savefig(filename)
+        if show:
+            plt.show()
 
 def main1(job_title, nw_path, fields_config, negf_config, comm=0, reduced_modes=False):
 
