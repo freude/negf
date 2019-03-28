@@ -484,7 +484,8 @@ def make_basis(nw_path, energy=np.linspace(2.1, 2.6, 20), save=True, show=False)
         if show:
             plt.show()
 
-def main1(job_title, nw_path, fields_config, negf_config, comm=0, reduced_modes=False):
+
+def main1(job_title, nw_path, fields_config, negf_config, comm=0, reduced_modes=False, save=True):
 
     if comm:
         rank = comm.Get_rank()
@@ -592,7 +593,7 @@ def main1(job_title, nw_path, fields_config, negf_config, comm=0, reduced_modes=
 
         gamma_l = 1j * (np.matrix(L) - np.matrix(L).H)
         gamma_r = 1j * (np.matrix(R) - np.matrix(R).H)
-        tr[j] = np.real(np.trace(gamma_l * g_trans * gamma_r * g_trans.H))
+        tr[j] = np.real(np.trace(gamma_r * g_trans * gamma_l * g_trans.H))
 
         print("{} of {}: energy is {}".format(j + 1, energy.shape[0], E))
 
@@ -612,10 +613,12 @@ def main1(job_title, nw_path, fields_config, negf_config, comm=0, reduced_modes=
             tr = np.array(tr)
             dens = np.array(dens)
 
-            np.save(os.path.join(nw_path, 'dos' + job_title + '.npy'), dos)
-            np.save(os.path.join(nw_path, 'tr' + job_title + '.npy'), tr)
-            np.save(os.path.join(nw_path, 'dens' + job_title + '.npy'), dens)
-            np.save(os.path.join(nw_path, 'energy.npy'), energy)
+            if save:
+
+                np.save(os.path.join(nw_path, 'dos' + job_title + '.npy'), dos)
+                np.save(os.path.join(nw_path, 'tr' + job_title + '.npy'), tr)
+                np.save(os.path.join(nw_path, 'dens' + job_title + '.npy'), dens)
+                np.save(os.path.join(nw_path, 'energy.npy'), energy)
 
             return dos, tr, dens
 
@@ -628,10 +631,12 @@ def main1(job_title, nw_path, fields_config, negf_config, comm=0, reduced_modes=
         # for j in range(1, dens.shape[0]):
         #     dens[j, :] = np.convolve(dens[j, :], np.ones((3,)) / 3, mode='valid')
 
-        np.save(os.path.join(nw_path, 'dos' + job_title + '.npy'), dos)
-        np.save(os.path.join(nw_path, 'tr' + job_title + '.npy'), tr)
-        np.save(os.path.join(nw_path, 'dens' + job_title + '.npy'), dens)
-        np.save(os.path.join(nw_path, 'energy.npy'), energy)
+        if save:
+
+            np.save(os.path.join(nw_path, 'dos' + job_title + '.npy'), dos)
+            np.save(os.path.join(nw_path, 'tr' + job_title + '.npy'), tr)
+            np.save(os.path.join(nw_path, 'dens' + job_title + '.npy'), dens)
+            np.save(os.path.join(nw_path, 'energy.npy'), energy)
 
         return dos, tr, dens
 
@@ -700,9 +705,9 @@ if __name__ == '__main__':
     ef2:        2.1
     tempr:      100
     energy:
-        start:  2.0
-        end:    2.5
-        steps:  3000
+        start:  2.1
+        end:    2.6
+        steps:  5000
 
     basis:   [2.10, 2.60, 20]
 
@@ -722,7 +727,7 @@ if __name__ == '__main__':
 
             eps:          3.8
 
-            cation:      "/home/mk/tetracene_dft_wB_pcm_38_32_cation.cube"
+            cation:      "/home/mk/tetracene_dft_wB_pcm_38_32_anion.cube"
 
             angle:       1.13446
             spacing:     {}
@@ -732,7 +737,7 @@ if __name__ == '__main__':
 
         """.format(spacing)
 
-        main1(str(int(spacing)),
+        main1('a' + str(int(spacing)),
               nw_path='./SiNW/SiNW2/',
               fields_config=fields_config,
               negf_config=negf_config,
