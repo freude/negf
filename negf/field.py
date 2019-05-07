@@ -68,7 +68,6 @@ class Field(object):
         self._atoms = []
 
         if path.endswith('.cube') or path.endswith('.cub'):
-
             data, meta = read_cube(path)
             data = np.swapaxes(data, 1, 2)
 
@@ -83,7 +82,8 @@ class Field(object):
             self._shape = shape
             self._atoms = meta['atoms']
 
-        data[data > 1] = 1
+        data[data > 100] = 100
+        data[data < -100] = -100
         self._interpolant = RegularGridInterpolator((x, y, z), data, bounds_error=False)
 
     def set_origin(self, origin):
@@ -126,7 +126,7 @@ class Field(object):
 
         self._rot_mat = []
 
-    def get_values(self, coords1, translate=None):
+    def _transform(self, coords1, translate):
 
         coords = coords1.copy()
 
@@ -146,6 +146,34 @@ class Field(object):
                 for item in self._rot_mat:
                     coords[j] = np.array(np.matrix(item) * np.matrix(coords[j]).T).T[0]
 
+        return coords
+
+    def _inv_transform(self, coords1, translate):
+
+        coords = coords1.copy()
+
+        if len(coords.shape) < 2:
+            coords = [coords]
+
+        for j in range(len(coords)):
+
+            if len(self._rot_mat) > 0:
+                for item in reversed(self._rot_mat):
+                    coords[j] = np.array(np.linalg.inv(np.matrix(item)) * np.matrix(coords[j]).T).T[0]
+
+            if isinstance(translate, np.ndarray):
+                coords[j] = coords[j] + np.squeeze(translate)
+
+            if self._origin_has_changed:
+                coords[j] = coords[j] + self._origin_shift
+
+            coords[j] -= self.origin
+
+        return coords
+
+    def get_values(self, coords1, translate=None):
+
+        coords = self._transform(coords1, translate)
         values = self._interpolant(coords)
 
         return np.nan_to_num(values)
@@ -160,6 +188,59 @@ class Field(object):
             coords.append(item[1][1:])
 
         return np.array(ind), np.array(coords)
+
+    def add_screening(self, eps, mol_y_length, spacing):
+
+        from negf.poisson import laplacian, PoissonSolver
+
+        num_points = 256
+
+        x = np.linspace(-19, 19, num_points - 1)
+        y = np.linspace(-19, 19, num_points - 1)
+        z = np.linspace(-19, 19, num_points - 1)
+
+        X = np.meshgrid(x, y, z)
+
+        coords = np.vstack((X[0].flatten(), X[1].flatten(), X[2].flatten())).T
+
+        vec = np.zeros(3)
+        eps[1] = mol_y_length * 0.5
+        vec[eps[0]] = 1.0
+        vec = np.array(vec)
+
+        rot_mat = np.matrix(np.identity(3))
+        # rot_mat[:2, :2] = np.matrix(np.sqrt(1.0 - self._rot_mat[0][1:, 1:]**2))
+        rot_mat[:2, :2] = np.matrix(self._rot_mat[0][1:, 1:])
+        rot_mat[0, 1] = -rot_mat[0, 1]
+        rot_mat[1, 0] = -rot_mat[1, 0]
+        # rot_mat = np.linalg.inv(rot_mat)
+        # rot_mat = np.sqrt(1.0 - rot_mat ** 2)
+        # rot_mat[2, 2] = 1.0
+        # rot_mat[0, 0] = -rot_mat[0, 0]
+        # rot_mat[1, 1] = -rot_mat[1, 1]
+
+        vec = np.array(rot_mat * np.matrix(vec).T).T[0]
+
+        dist = X[0] * vec[0] + X[1] * vec[1] + X[2] * vec[2] + eps[1] + \
+               0.5 * mol_y_length * (1.0 - np.sin(1.13446)) + \
+               spacing
+
+        perm = eps[2] * (1.0 - 0.5 * np.tanh(eps[1] * dist) - 0.5) \
+               + eps[3] * (0.5 * np.tanh(eps[1] * dist) + 0.5)
+
+        # perm = np.ones(perm.shape)
+
+        pot = self._interpolant(np.vstack((X[0].flatten(), X[1].flatten(), X[2].flatten())).T).reshape(X[0].shape)
+        pot1 = np.zeros(pot.shape)
+        dens = -laplacian(pot, x[2] - x[1]) / (4 * np.pi)
+
+        ps = PoissonSolver()
+        ps.solve_mesh(X[0], X[1], X[2], pot1, dens, perm)
+
+        # pot1 = pot1 + 0.1 * perm / np.max(perm)
+
+        pot1 = np.swapaxes(pot1, 1, 0)
+        self._interpolant = RegularGridInterpolator((x, y, z), pot1, bounds_error=False)
 
 
 class Field1D(object):
@@ -187,7 +268,6 @@ class Field1D(object):
 
 
 def main():
-
     import matplotlib.pyplot as plt
 
     fl = Field(path='/home/mk/gaussian_swarm/gauss_comp/out_neutral.cube')
@@ -219,8 +299,21 @@ def main():
     plt.show()
 
 
-def main1():
+def laplacian(input_mat, dx):
+    top = input_mat[0:-2, 1:-1, 1:-1]
+    left = input_mat[1:-1, 0:-2, 1:-1]
+    bottom = input_mat[2:, 1:-1, 1:-1]
+    right = input_mat[1:-1, 2:, 1:-1]
+    center = input_mat[1:-1, 1:-1, 1:-1]
+    back = input_mat[1:-1, 1:-1, 0:-2]
+    forward = input_mat[1:-1, 1:-1, 2:]
+    return np.pad(top + left + bottom + right + back + forward - 6 * center,
+                  ((1, 1), (1, 1), (1, 1)),
+                  'constant',
+                  constant_values=((0, 0), (0, 0), (0, 0))) / dx ** 2
 
+
+def main1():
     import matplotlib.pyplot as plt
 
     # fl = Field(path='/home/mk/gaussian_swarm/gauss_comp/wB_ion.cube')
@@ -250,14 +343,12 @@ def main1():
     # fl1.set_origin(np.array([0.0, 0.0, 1.0]))
 
     fl.set_origin(np.array([6.36, 11.86, 2.75]))
-    fl.rotate('z', 1.13446)     # 65 degrees
+    fl.rotate('z', 1.13446)  # 65 degrees
     data = fl.get_values(np.vstack((X.flatten(), Y.flatten(), Z.flatten())).T)
     data = data.reshape(X.shape)
 
     data1 = fl1.get_values(np.vstack((X.flatten(), Y.flatten(), Z.flatten())).T)
     data1 = data1.reshape(X.shape)
-
-    # plt.imshow(data[:, :, 100])
 
     cut_level = 0.015
 
@@ -270,7 +361,8 @@ def main1():
     # cmap = cm.seismic
     cmap = cm.coolwarm
     levels = np.arange(-cut_level * 1.1, cut_level * 1.1, 0.002)
-    cset = plt.contourf(X[:, :, 100], Y[:, :, 100], data[:, :, 100], levels, norm=norm, cmap=cm.get_cmap(cmap, len(levels) - 1))
+    cset = plt.contourf(X[:, :, 100], Y[:, :, 100], data[:, :, 100], levels, norm=norm,
+                        cmap=cm.get_cmap(cmap, len(levels) - 1))
 
     from matplotlib.patches import Rectangle
     currentAxis = plt.gca()
@@ -304,7 +396,6 @@ class nf(float):
 
 
 def plot(x, y, data, data1, cut_level, n_contours):
-
     X, Y = np.meshgrid(x, y, indexing='ij')
 
     data[data > cut_level] = cut_level
@@ -319,9 +410,9 @@ def plot(x, y, data, data1, cut_level, n_contours):
     # levels = np.linspace(-0.01, 0.01, 21)
     fig, ax = plt.subplots(figsize=(10, 10))
     cset = ax.contourf(X, Y, data, levels, norm=norm,
-                        cmap=cm.get_cmap(cmap, len(levels) - 1))
+                       cmap=cm.get_cmap(cmap, len(levels) - 1))
     cset = ax.contour(X, Y, data, levels, norm=norm,
-                        colors='r', linewidths=1)
+                      colors='r', linewidths=1)
 
     cset = ax.contour(X, Y, data1, levels, norm=norm, colors='k')
 
@@ -343,7 +434,6 @@ def plot(x, y, data, data1, cut_level, n_contours):
 
 
 if __name__ == '__main__':
-
     main1()
 
     # path = '/home/mk/tetracene_dft_wB_pcm_38_32.cube'

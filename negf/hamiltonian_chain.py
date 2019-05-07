@@ -202,7 +202,7 @@ class HamiltonianChainComposer(HamiltonianChain):
         super(HamiltonianChainComposer, self).__init__(h_l, h_0, h_r, coords)
 
         self.translate(params['unit_cell'], params['left_translations'], params['right_translations'])
-
+        self.mol_length = 0
         uc = np.array(params['unit_cell'])
 
         if 'fields' in params:
@@ -228,9 +228,9 @@ class HamiltonianChainComposer(HamiltonianChain):
                     size_y_max = np.max(coords[:, 1])
 
                     _, mol_coords = dict_of_fields[field].get_atoms()
-                    mol_y_length = np.max(mol_coords[:, 1]) - np.min(mol_coords[:, 1])
-                    mol_y_length = mol_y_length * np.sin(angle)
-                    mol_z_length = mol_y_length * np.cos(angle)
+                    mol_y_length0 = np.max(mol_coords[:, 1]) - np.min(mol_coords[:, 1])
+                    mol_y_length = mol_y_length0 * np.sin(angle)
+                    mol_z_length = mol_y_length0 * np.cos(angle)
 
                     dict_of_fields[field].mean_coords = np.array([0.5 * (size_x_max - np.abs(size_y_min)),
                                                                   size_y_max + 0.5 * mol_y_length +
@@ -239,7 +239,11 @@ class HamiltonianChainComposer(HamiltonianChain):
 
                     dict_of_fields[field].set_origin(dict_of_fields[field].mean_coords + np.array(item[field]))
 
-                self.add_field(dict_of_fields[field], eps=params['fields']['eps'])
+                if isinstance(params['fields']['eps'], list):
+                    dict_of_fields[field].add_screening(params['fields']['eps'], mol_y_length0, params['fields']['spacing'])
+                    self.add_field(dict_of_fields[field], eps=1.0)
+                else:
+                    self.add_field(dict_of_fields[field], eps=params['fields']['eps'])
 
 
 if __name__ == '__main__':

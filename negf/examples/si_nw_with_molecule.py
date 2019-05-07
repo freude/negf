@@ -8,7 +8,7 @@ from negf.recursive_greens_functions import recursive_gf
 from ase.visualize.plot import plot_atoms, Matplotlib
 from ase.io import read
 from negf.aux_functions import yaml_parser
-
+from copy import copy, deepcopy
 
 save_to = './SiNW/'
 
@@ -123,7 +123,7 @@ def visualize(hc, field, size_x_min, size_y_min, size_z_min):
 
     # ----------------------------------------------------------------------------
 
-    cut_level = 0.01*20
+    cut_level = 0.01 * 20
     data[data > cut_level] = cut_level
     # data[data < -cut_level] = -cut_level
 
@@ -168,15 +168,15 @@ def visualize(hc, field, size_x_min, size_y_min, size_z_min):
 
                 j = (set_ind - {j1, j2}).pop()
 
-                cset = ax[max(j2 - j1 - 1, 0), j1].contourf(np.take(X[jj1], inds[j], j)+shift,
-                                                            np.take(X[jj2], inds[j], j)+shift,
+                cset = ax[max(j2 - j1 - 1, 0), j1].contourf(np.take(X[jj1], inds[j], j) + shift,
+                                                            np.take(X[jj2], inds[j], j) + shift,
                                                             np.take(data, inds[j], j),
                                                             levels,
                                                             norm=norm,
                                                             cmap=cm.get_cmap(cmap, len(levels) - 1))
 
-                cset = ax[max(j2 - j1 - 1, 0), j1].contour(np.take(X[jj1], inds[j], j)+shift,
-                                                           np.take(X[jj2], inds[j], j)+shift,
+                cset = ax[max(j2 - j1 - 1, 0), j1].contour(np.take(X[jj1], inds[j], j) + shift,
+                                                           np.take(X[jj2], inds[j], j) + shift,
                                                            np.take(data, inds[j], j),
                                                            levels,
                                                            norm=norm,
@@ -193,23 +193,23 @@ def visualize(hc, field, size_x_min, size_y_min, size_z_min):
 
                 if j == 0:
                     rotation = ('0x,90y,0z')
-                    offsets = (size_z_min+shift+radii-5, size_y_min+shift-radii)
+                    offsets = (size_z_min + shift + radii - 5, size_y_min + shift - radii)
                 elif j == 1:
                     rotation = ('90x,0y,0z')
-                    offsets = (size_x_min+shift-radii, size_z_min+shift+radii-5)
+                    offsets = (size_x_min + shift - radii, size_z_min + shift + radii - 5)
                 else:
                     rotation = ('0x,0y,0z')
-                    offsets = (size_x_min+shift-radii, size_y_min+shift-radii)
+                    offsets = (size_x_min + shift - radii, size_y_min + shift - radii)
 
                 plot_atoms(slab, ax=ax[max(j2 - j1 - 1, 0), j1], radii=radii, offset=offsets, rotation=rotation)
 
                 ax[max(j2 - j1 - 1, 0), j1].axis('off')
-                ax[max(j2 - j1 - 1, 0), j1].set_ylim(np.min(x[jj2])+shift, np.max(x[jj2])+shift)
+                ax[max(j2 - j1 - 1, 0), j1].set_ylim(np.min(x[jj2]) + shift, np.max(x[jj2]) + shift)
 
                 if j1 != jj1:
-                    ax[max(j2 - j1 - 1, 0), j1].set_xlim(np.max(x[jj1])+shift, np.min(x[jj1])+shift)
+                    ax[max(j2 - j1 - 1, 0), j1].set_xlim(np.max(x[jj1]) + shift, np.min(x[jj1]) + shift)
                 else:
-                    ax[max(j2 - j1 - 1, 0), j1].set_xlim(np.min(x[jj1])+shift, np.max(x[jj1])+shift)
+                    ax[max(j2 - j1 - 1, 0), j1].set_xlim(np.min(x[jj1]) + shift, np.max(x[jj1]) + shift)
 
     ax[1, 1].axis('off')
     plt.tight_layout()
@@ -238,7 +238,7 @@ def visualize1(hc, field, size_x_min, size_y_min, size_z_min):
 
     # ----------------------------------------------------------------------------
 
-    cut_level = 0.01*20
+    cut_level = 0.01 * 20
     data[data > cut_level] = cut_level
     # data[data < -cut_level] = -cut_level
 
@@ -282,20 +282,20 @@ def visualize1(hc, field, size_x_min, size_y_min, size_z_min):
 
                 fig, ax = plt.subplots(figsize=(10, 10))
 
-                cset = ax.contourf(np.take(X[jj1], inds[j], j)+shift,
-                                                            np.take(X[jj2], inds[j], j)+shift,
-                                                            np.take(data, inds[j], j),
-                                                            levels,
-                                                            norm=norm,
-                                                            cmap=cm.get_cmap(cmap, len(levels) - 1))
+                cset = ax.contourf(np.take(X[jj1], inds[j], j) + shift,
+                                   np.take(X[jj2], inds[j], j) + shift,
+                                   np.take(data, inds[j], j),
+                                   levels,
+                                   norm=norm,
+                                   cmap=cm.get_cmap(cmap, len(levels) - 1))
 
-                cset = ax.contour(np.take(X[jj1], inds[j], j)+shift,
-                                                           np.take(X[jj2], inds[j], j)+shift,
-                                                           np.take(data, inds[j], j),
-                                                           levels,
-                                                           norm=norm,
-                                                           colors='k',
-                                                           linewidths=1)
+                cset = ax.contour(np.take(X[jj1], inds[j], j) + shift,
+                                  np.take(X[jj2], inds[j], j) + shift,
+                                  np.take(data, inds[j], j),
+                                  levels,
+                                  norm=norm,
+                                  colors='k',
+                                  linewidths=1)
 
                 # ax[max(j2 - j1 - 1, 0), j1].add_patch(Rectangle((mins[jj1]+shift, mins[jj2]+shift),
                 #                                                 sizes[jj1],
@@ -307,30 +307,159 @@ def visualize1(hc, field, size_x_min, size_y_min, size_z_min):
 
                 if j == 0:
                     rotation = ('0x,90y,0z')
-                    offsets = (size_z_min+shift+radii-5, size_y_min+shift-radii)
+                    offsets = (size_z_min + shift + radii - 5, size_y_min + shift - radii)
                 elif j == 1:
                     rotation = ('90x,0y,0z')
-                    offsets = (size_x_min+shift-radii, size_z_min+shift+radii-5)
+                    offsets = (size_x_min + shift - radii, size_z_min + shift + radii - 5)
                 else:
                     rotation = ('0x,0y,0z')
-                    offsets = (size_x_min+shift-radii, size_y_min+shift-radii)
+                    offsets = (size_x_min + shift - radii, size_y_min + shift - radii)
 
                 plot_atoms(slab, ax=ax, radii=radii, offset=offsets, rotation=rotation)
 
                 ax.axis('off')
-                ax.set_ylim(np.min(x[jj2])+shift, np.max(x[jj2])+shift)
+                ax.set_ylim(np.min(x[jj2]) + shift, np.max(x[jj2]) + shift)
 
                 if j1 != jj1:
-                    ax.set_xlim(np.max(x[jj1])+shift, np.min(x[jj1])+shift)
+                    ax.set_xlim(np.max(x[jj1]) + shift, np.min(x[jj1]) + shift)
                 else:
-                    ax.set_xlim(np.min(x[jj1])+shift, np.max(x[jj1])+shift)
+                    ax.set_xlim(np.min(x[jj1]) + shift, np.max(x[jj1]) + shift)
+
+                plt.tight_layout()
+                plt.show()
+
+
+def visualize2(hc, field, size_x_min, size_y_min, size_z_min):
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Rectangle
+    from matplotlib import cm
+
+    if not isinstance(field, list):
+        field = [field]
+
+    # ----------------------------------------------------------------------------
+
+    slab = read('./SiNW/SiNW2/SiNW2f.xyz', format='xyz')
+
+    # ----------------------------------------------------------------------------
+
+    x = np.linspace(-14, 26, 100)
+    y = np.linspace(-3, 30, 100)
+    z = np.linspace(-20, 20, 100)
+
+    X = np.meshgrid(x, y, z, indexing='ij')
+
+    data = []
+
+    for j, fl in enumerate(field):
+        data.append(fl.get_values(np.vstack((X[0].flatten(),
+                                             X[1].flatten(),
+                                             X[2].flatten())).T).reshape(X[0].shape) / 3.8)
+
+        cut_level = 0.01 * 20
+        data[j][data[j] > cut_level] = cut_level
+        data[j][data[j] < -cut_level] = -cut_level
+
+    # ----------------------------------------------------------------------------
+
+    n_contours = 21
+
+    norm = cm.colors.Normalize(vmax=cut_level, vmin=-cut_level)
+    # cmap = cm.PRGn
+    # cmap = cm.seismic
+    cmap = cm.coolwarm
+    levels = np.arange(-cut_level * 1.1, cut_level * 1.1, 2 * cut_level / n_contours)
+
+    # ----------------------------------------------------------------------------
+
+    x = (x, y, z)
+
+    mins = [max(np.min(hc.coords[:, j]), np.min(x[j])) for j in range(3)]
+    sizes = [min(np.max(hc.coords[:, j]) - mins[j], np.max(x[j]) - mins[j]) for j in range(3)]
+    # inds = [np.argmin(np.abs(x + field._origin_shift[j])) for j in range(3)]
+    inds = [np.argmin(np.abs(x[j] - mins[j] - 0.5 * sizes[j])) for j in range(3)]
+
+    # ----------------------------------------------------------------------------
+
+    set_ind = {0, 1, 2}
+
+    shift = 100
+
+    for j1 in range(3):
+        for j2 in range(3):
+            if j1 != j2 and j2 > j1:
+
+                if j1 == 1:
+                    jj2 = j1
+                    jj1 = j2
+                else:
+                    jj1 = j1
+                    jj2 = j2
+
+                j = (set_ind - {j1, j2}).pop()
+
+                fig, ax = plt.subplots(figsize=(10, 10))
+
+                for jjj, dt in enumerate(data):
+
+                    if jjj == 0:
+                        ax.contourf(np.take(X[jj1], inds[j], j) + shift,
+                                    np.take(X[jj2], inds[j], j) + shift,
+                                    np.take(dt, inds[j], j),
+                                    levels,
+                                    norm=norm,
+                                    cmap=cm.get_cmap(cmap, len(levels) - 1))
+
+                        ax.contour(np.take(X[jj1], inds[j], j) + shift,
+                                   np.take(X[jj2], inds[j], j) + shift,
+                                   np.take(dt, inds[j], j),
+                                   levels,
+                                   norm=norm,
+                                   colors='k',
+                                   linewidths=1)
+                    else:
+                        ax.contour(np.take(X[jj1], inds[j], j) + shift,
+                                   np.take(X[jj2], inds[j], j) + shift,
+                                   np.take(dt, inds[j], j),
+                                   levels,
+                                   norm=norm,
+                                   colors='r',
+                                   linewidths=2,
+                                   linestyles=':')
+
+                # ax[max(j2 - j1 - 1, 0), j1].add_patch(Rectangle((mins[jj1]+shift, mins[jj2]+shift),
+                #                                                 sizes[jj1],
+                #                                                 sizes[jj2],
+                #                                                 alpha=1,
+                #                                                 fill=None))
+
+                radii = 0.5
+
+                if j == 0:
+                    rotation = ('0x,90y,0z')
+                    offsets = (size_z_min + shift + radii - 5, size_y_min + shift - radii)
+                elif j == 1:
+                    rotation = ('90x,0y,0z')
+                    offsets = (size_x_min + shift - radii, size_z_min + shift + radii - 5)
+                else:
+                    rotation = ('0x,0y,0z')
+                    offsets = (size_x_min + shift - radii, size_y_min + shift - radii)
+
+                plot_atoms(slab, ax=ax, radii=radii, offset=offsets, rotation=rotation)
+
+                ax.axis('off')
+                ax.set_ylim(np.min(x[jj2]) + shift, np.max(x[jj2]) + shift)
+
+                if j1 != jj1:
+                    ax.set_xlim(np.max(x[jj1]) + shift, np.min(x[jj1]) + shift)
+                else:
+                    ax.set_xlim(np.min(x[jj1]) + shift, np.max(x[jj1]) + shift)
 
                 plt.tight_layout()
                 plt.show()
 
 
 def main(spacing, mol_path, nw_path, eps, comm=0):
-
     if comm:
         rank = comm.Get_rank()
         size = comm.Get_size()
@@ -369,7 +498,7 @@ def main(spacing, mol_path, nw_path, eps, comm=0):
 
     field = Field(path=mol_path)
 
-    angle = 1.13446                    # 65 degrees
+    angle = 1.13446  # 65 degrees
     field.rotate('x', angle)
     field.rotate('y', np.pi / 2.0)
 
@@ -384,21 +513,36 @@ def main(spacing, mol_path, nw_path, eps, comm=0):
     size_z_max = np.max(coords[:, 2]) * 3
 
     _, mol_coords = field.get_atoms()
-    mol_y_length = np.max(mol_coords[:, 1]) - np.min(mol_coords[:, 1])
-    mol_y_length = mol_y_length * np.sin(angle)
-    mol_z_length = mol_y_length * np.cos(angle)
+    mol_y_length0 = np.max(mol_coords[:, 1]) - np.min(mol_coords[:, 1])
+    mol_y_length = mol_y_length0 * np.sin(angle)
+    mol_z_length = mol_y_length0 * np.cos(angle)
 
     field.set_origin(np.array([0.5 * (size_x_max - np.abs(size_y_min)),
                                size_y_max + 0.5 * mol_y_length + spacing,
-                               0.5*mol_z_length]))
+                               0.5 * mol_z_length]))
 
     # ---------------------------------------------------------------------------------
     # ------------------- add field to the Hamiltonian and visualize ------------------
     # ---------------------------------------------------------------------------------
 
-    h_chain.add_field(field, eps=eps)
-    h_chain.visualize()
-    # visualize1(h_chain, field, size_x_min, size_y_min, size_z_min)
+    field1 = deepcopy(field)
+    field1.add_screening(eps, mol_y_length0, spacing)
+    visualize2(h_chain, [field1, field], size_x_min, size_y_min, size_z_min)
+
+    h_chain1 = deepcopy(h_chain)
+
+    h_chain.add_field(field, eps=3.8)
+    h_chain1.add_field(field1, eps=1.0)
+
+    # if isinstance(eps, list):
+    #     field.add_screening(eps, mol_y_length0)
+    #     h_chain.add_field(field, eps=1.0)
+    # else:
+    #     h_chain.add_field(field, eps=eps)
+
+    # h_chain.add_field(field, eps=eps)
+    # h_chain.visualize()
+    visualize1(h_chain, field, size_x_min, size_y_min, size_z_min)
 
     # ---------------------------------------------------------------------------------
     # -------------------- compute Green's functions of the system --------------------
@@ -427,10 +571,10 @@ def main(spacing, mol_path, nw_path, eps, comm=0):
 
         h_chain.add_self_energies(L, R, energy=E, tempr=tempr, ef1=ef1, ef2=ef2)
         g_trans, grd, grl, gru, gr_left, gnd, gnl, gnu, gn_left = recursive_gf(E,
-                                                                      h_chain.h_l,
-                                                                      h_chain.h_0,
-                                                                      h_chain.h_r,
-                                                                      s_in=h_chain.sgf)
+                                                                               h_chain.h_l,
+                                                                               h_chain.h_0,
+                                                                               h_chain.h_r,
+                                                                               s_in=h_chain.sgf)
         h_chain.remove_self_energies()
 
         for jj in range(num_periods):
@@ -463,7 +607,6 @@ def main(spacing, mol_path, nw_path, eps, comm=0):
 
 
 def make_basis(nw_path, energy=np.linspace(2.1, 2.6, 20), save=True, show=False):
-
     import matplotlib.pyplot as plt
 
     h_l, h_0, h_r, coords, path = compute_tb_matrices(input_file=nw_path)
@@ -486,7 +629,6 @@ def make_basis(nw_path, energy=np.linspace(2.1, 2.6, 20), save=True, show=False)
 
 
 def main1(job_title, nw_path, fields_config, negf_config, comm=0, reduced_modes=False, save=True):
-
     if comm:
         rank = comm.Get_rank()
         size = comm.Get_size()
@@ -614,7 +756,6 @@ def main1(job_title, nw_path, fields_config, negf_config, comm=0, reduced_modes=
             dens = np.array(dens)
 
             if save:
-
                 np.save(os.path.join(nw_path, 'dos' + job_title + '.npy'), dos)
                 np.save(os.path.join(nw_path, 'tr' + job_title + '.npy'), tr)
                 np.save(os.path.join(nw_path, 'dens' + job_title + '.npy'), dens)
@@ -632,13 +773,13 @@ def main1(job_title, nw_path, fields_config, negf_config, comm=0, reduced_modes=
         #     dens[j, :] = np.convolve(dens[j, :], np.ones((3,)) / 3, mode='valid')
 
         if save:
-
             np.save(os.path.join(nw_path, 'dos' + job_title + '.npy'), dos)
             np.save(os.path.join(nw_path, 'tr' + job_title + '.npy'), tr)
             np.save(os.path.join(nw_path, 'dens' + job_title + '.npy'), dens)
             np.save(os.path.join(nw_path, 'energy.npy'), energy)
 
         return dos, tr, dens
+
 
 # if __name__ == '__main__':
 #
@@ -691,11 +832,17 @@ def main1(job_title, nw_path, fields_config, negf_config, comm=0, reduced_modes=
 
 if __name__ == '__main__':
 
+    main(spacing=5.0,
+         mol_path='/home/mk/tetracene_dft_wB_pcm_38_32_anion.cube',
+         nw_path='./SiNW/SiNW2/',
+         eps=[1, 10.0, 10.62, 3.8],
+         comm=0)
+
     # main(spacing=1.0,
     #      mol_path='/home/mk/tetracene_dft_wB_pcm_38_32_anion.cube',
     #      nw_path='./SiNW/SiNW2/',
     #      eps=3.8,
-    #      comm=comm)
+    #      comm=0)
 
     negf_config = """
 
@@ -725,7 +872,7 @@ if __name__ == '__main__':
 
         fields:
 
-            eps:          3.8
+            eps:          [1, 10.0, 3.8, 50.62]
 
             cation:      "/home/mk/tetracene_dft_wB_pcm_38_32_anion.cube"
 
