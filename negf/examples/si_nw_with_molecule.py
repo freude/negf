@@ -216,7 +216,7 @@ def visualize(hc, field, size_x_min, size_y_min, size_z_min):
     plt.show()
 
 
-def visualize1(hc, field, size_x_min, size_y_min, size_z_min):
+def visualize1(hc, field, size_x_min, size_y_min, size_z_min, eps=3.8):
     import matplotlib.pyplot as plt
     from matplotlib.patches import Rectangle
     from matplotlib import cm
@@ -234,7 +234,7 @@ def visualize1(hc, field, size_x_min, size_y_min, size_z_min):
     X = np.meshgrid(x, y, z, indexing='ij')
     data = field.get_values(np.vstack((X[0].flatten(),
                                        X[1].flatten(),
-                                       X[2].flatten())).T).reshape(X[0].shape) / 3.8
+                                       X[2].flatten())).T).reshape(X[0].shape) / eps
 
     # ----------------------------------------------------------------------------
 
@@ -329,13 +329,14 @@ def visualize1(hc, field, size_x_min, size_y_min, size_z_min):
                 plt.show()
 
 
-def visualize2(hc, field, size_x_min, size_y_min, size_z_min):
+def visualize2(hc, field, size_x_min, size_y_min, size_z_min, eps):
     import matplotlib.pyplot as plt
     from matplotlib.patches import Rectangle
     from matplotlib import cm
 
     if not isinstance(field, list):
         field = [field]
+        eps = [eps]
 
     # ----------------------------------------------------------------------------
 
@@ -354,7 +355,7 @@ def visualize2(hc, field, size_x_min, size_y_min, size_z_min):
     for j, fl in enumerate(field):
         data.append(fl.get_values(np.vstack((X[0].flatten(),
                                              X[1].flatten(),
-                                             X[2].flatten())).T).reshape(X[0].shape) / 3.8)
+                                             X[2].flatten())).T).reshape(X[0].shape) / eps[j])
 
         cut_level = 0.01 * 20
         data[j][data[j] > cut_level] = cut_level
@@ -527,7 +528,7 @@ def main(spacing, mol_path, nw_path, eps, comm=0):
 
     field1 = deepcopy(field)
     field1.add_screening(eps, mol_y_length0, spacing)
-    visualize2(h_chain, [field1, field], size_x_min, size_y_min, size_z_min)
+    visualize2(h_chain, [field1, field], size_x_min, size_y_min, size_z_min, eps=[1.0, 3.8])
 
     h_chain1 = deepcopy(h_chain)
 
@@ -542,7 +543,7 @@ def main(spacing, mol_path, nw_path, eps, comm=0):
 
     # h_chain.add_field(field, eps=eps)
     # h_chain.visualize()
-    visualize1(h_chain, field, size_x_min, size_y_min, size_z_min)
+    visualize1(h_chain, field, size_x_min, size_y_min, size_z_min, eps=3.8)
 
     # ---------------------------------------------------------------------------------
     # -------------------- compute Green's functions of the system --------------------
@@ -678,6 +679,9 @@ def main1(job_title, nw_path, fields_config, negf_config, comm=0, reduced_modes=
     h_0 = h_0 + 1j * negf_params['dephasing'] * np.identity(h_0.shape[0])
 
     h_chain = HamiltonianChainComposer(h_l, h_0, h_r, coords, params)
+
+    visualize1(h_chain, h_chain.dict_of_fields['cation'], -0.85, -0.85, -18.7, eps=3.8)
+
     # h_chain.visualize()
 
     if len(new_basis) > 0:
@@ -832,11 +836,11 @@ def main1(job_title, nw_path, fields_config, negf_config, comm=0, reduced_modes=
 
 if __name__ == '__main__':
 
-    main(spacing=5.0,
-         mol_path='/home/mk/tetracene_dft_wB_pcm_38_32_anion.cube',
-         nw_path='./SiNW/SiNW2/',
-         eps=[1, 10.0, 10.62, 3.8],
-         comm=0)
+    # main(spacing=5.0,
+    #      mol_path='/home/mk/tetracene_dft_wB_pcm_38_32_anion.cube',
+    #      nw_path='./SiNW/SiNW2/',
+    #      eps=[1, 100.0, 10.62, 3.8],
+    #      comm=0)
 
     # main(spacing=1.0,
     #      mol_path='/home/mk/tetracene_dft_wB_pcm_38_32_anion.cube',
@@ -860,7 +864,7 @@ if __name__ == '__main__':
 
     """
 
-    spacings = np.arange(1.0, 28.0)
+    spacings = np.arange(3.0, 28.0)
 
     for spacing in spacings:
         fields_config = """
@@ -872,7 +876,7 @@ if __name__ == '__main__':
 
         fields:
 
-            eps:          [1, 10.0, 3.8, 50.62]
+            eps:          [1, 10.0, 10.62, 3.8]
 
             cation:      "/home/mk/tetracene_dft_wB_pcm_38_32_anion.cube"
 
@@ -883,9 +887,9 @@ if __name__ == '__main__':
                 - cation:       [0.0,    0.0,    0.0]
 
         """.format(spacing)
-
-        main1('a' + str(int(spacing)),
-              nw_path='./SiNW/SiNW2/',
+        # eps: [1, 10.0, 3.8, 3.8]
+        main1(str(int(spacing)),
+              nw_path='./SiNW*/SiNW2/',
               fields_config=fields_config,
               negf_config=negf_config,
               reduced_modes=True)

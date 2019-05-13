@@ -19,8 +19,9 @@ class PoissonSolver(BasePoissonSolver):
 
         self.delta = []
 
-        conv_criteria = np.max(dens0) * 0.001
         alpha = 0.01
+        dens0 = dens0 / permitivity
+        conv_criteria = np.max(dens0) * 0.0001
         dens = dens0
 
         dx = self.gd.h_cv[0][0]
@@ -35,7 +36,7 @@ class PoissonSolver(BasePoissonSolver):
             delta = (aaa_x * bbb_x + aaa_y * bbb_y + aaa_z * bbb_z) / permitivity
 
             self.delta.append(np.max(delta))
-            dens = dens0 - delta * alpha
+            dens = dens0 + delta * alpha
 
             if j > 1:
                 if np.abs(self.delta[-1] - self.delta[-2]) < conv_criteria:

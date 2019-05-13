@@ -205,45 +205,46 @@ class HamiltonianChainComposer(HamiltonianChain):
         self.mol_length = 0
         uc = np.array(params['unit_cell'])
 
-        if 'fields' in params:
+        self.dict_of_fields = {}
 
-            dict_of_fields = {}
+        if 'fields' in params:
 
             for item in params['fields']['xyz']:
 
                 field = list(item.keys())[0]
 
-                if field in dict_of_fields:
-                    dict_of_fields[field].set_origin(dict_of_fields[field].mean_coords + np.array(item[field]))
+                if field in self.dict_of_fields:
+                    self.dict_of_fields[field].set_origin(self.dict_of_fields[field].mean_coords + np.array(item[field]))
                 else:
-                    dict_of_fields[field] = Field(path=params['fields'][field])
+                    self.dict_of_fields[field] = Field(path=params['fields'][field])
                     # angle = 1.13446
                     angle = params['fields']['angle']
 
-                    dict_of_fields[field].rotate('x', angle)  # 65 degrees
-                    dict_of_fields[field].rotate('y', np.pi / 2.0)
+                    self.dict_of_fields[field].rotate('x', angle)  # 65 degrees
+                    self.dict_of_fields[field].rotate('y', np.pi / 2.0)
 
                     size_x_max = np.max(coords[:, 0])
                     size_y_min = np.min(coords[:, 1])
                     size_y_max = np.max(coords[:, 1])
 
-                    _, mol_coords = dict_of_fields[field].get_atoms()
+                    _, mol_coords = self.dict_of_fields[field].get_atoms()
                     mol_y_length0 = np.max(mol_coords[:, 1]) - np.min(mol_coords[:, 1])
                     mol_y_length = mol_y_length0 * np.sin(angle)
                     mol_z_length = mol_y_length0 * np.cos(angle)
 
-                    dict_of_fields[field].mean_coords = np.array([0.5 * (size_x_max - np.abs(size_y_min)),
+                    self.dict_of_fields[field].mean_coords = np.array([0.5 * (size_x_max - np.abs(size_y_min)),
                                                                   size_y_max + 0.5 * mol_y_length +
                                                                   params['fields']['spacing'],
                                                                   0.5 * mol_z_length])
 
-                    dict_of_fields[field].set_origin(dict_of_fields[field].mean_coords + np.array(item[field]))
+                    self.dict_of_fields[field].set_origin(self.dict_of_fields[field].mean_coords + np.array(item[field]))
 
                 if isinstance(params['fields']['eps'], list):
-                    dict_of_fields[field].add_screening(params['fields']['eps'], mol_y_length0, params['fields']['spacing'])
-                    self.add_field(dict_of_fields[field], eps=1.0)
+                    self.dict_of_fields[field].add_screening(params['fields']['eps'], mol_y_length0, params['fields']['spacing'])
+                    # self.add_field(self.dict_of_fields[field], eps=params['fields']['eps'][3])
+                    self.add_field(self.dict_of_fields[field], eps=1.0)
                 else:
-                    self.add_field(dict_of_fields[field], eps=params['fields']['eps'])
+                    self.add_field(self.dict_of_fields[field], eps=params['fields']['eps'])
 
 
 if __name__ == '__main__':
