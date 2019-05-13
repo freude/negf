@@ -680,7 +680,7 @@ def main1(job_title, nw_path, fields_config, negf_config, comm=0, reduced_modes=
 
     h_chain = HamiltonianChainComposer(h_l, h_0, h_r, coords, params)
 
-    visualize1(h_chain, h_chain.dict_of_fields['cation'], -0.85, -0.85, -18.7, eps=3.8)
+    # visualize1(h_chain, h_chain.dict_of_fields['cation'], -0.85, -0.85, -18.7, eps=3.8)
 
     # h_chain.visualize()
 
